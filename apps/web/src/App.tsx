@@ -257,6 +257,15 @@ export function App() {
 
   return (
     <div ref={shellRef} className="app-shell" data-cantrack-app-shell>
+      {session !== null ? (
+        <button
+          className="app-shell__logout"
+          type="button"
+          onClick={() => void supabase.auth.signOut()}
+        >
+          Log out
+        </button>
+      ) : null}
       {authError !== null ? <p className="app-shell__alert" role="alert">{authError}</p> : null}
       {session === null ? <AuthShell /> : null}
       {role === "owner" ? (

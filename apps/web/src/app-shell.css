@@ -464,6 +464,27 @@ button:disabled {
   box-shadow: var(--cantrack-shadow);
 }
 
+.app-shell__logout {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 10;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--cantrack-surface);
+  color: var(--cantrack-ink);
+  font-weight: 600;
+  font-size: 0.85rem;
+  box-shadow: var(--cantrack-shadow);
+  cursor: pointer;
+}
+
+.app-shell__logout:hover {
+  background: var(--cantrack-green);
+  color: var(--cantrack-surface);
+}
+
 .app-shell__panel > * {
   position: relative;
   z-index: 1;
