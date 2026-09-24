@@ -6,7 +6,6 @@ import {
   type CheckInResult,
   type Route,
 } from "../lib/api.js";
-import { getEmbedding } from "../lib/clip.js";
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "message" in error) {
@@ -46,8 +45,14 @@ function useWalkerRouteScreenMount() {
   return screenRef;
 }
 
-export function WalkerRouteScreen({ routeId }: { routeId: string }) {
-  const [route, setRoute] = useState<Route | null>(null);
+export function WalkerRouteScreen({
+  routeId,
+  initialRoute,
+}: {
+  routeId: string;
+  initialRoute?: Route;
+}) {
+  const [route, setRoute] = useState<Route | null>(initialRoute ?? null);
   const [isLoading, setIsLoading] = useState(true);
   const [routeError, setRouteError] = useState<string | null>(null);
   const [selectedStopIndex, setSelectedStopIndex] = useState<number | null>(null);
@@ -62,28 +67,33 @@ export function WalkerRouteScreen({ routeId }: { routeId: string }) {
 
   useEffect(() => {
     let isMounted = true;
+    setRoute(initialRoute ?? null);
+    setIsLoading(true);
+    setRouteError(null);
 
-    void fetchRoute(routeId)
-      .then((loadedRoute) => {
+    async function loadRoute() {
+      try {
+        const loadedRoute = await fetchRoute(routeId);
         if (isMounted) {
           setRoute(loadedRoute);
         }
-      })
-      .catch((error: unknown) => {
+      } catch (error: unknown) {
         if (isMounted) {
           setRouteError(getErrorMessage(error, "Unable to load the route."));
         }
-      })
-      .finally(() => {
+      } finally {
         if (isMounted) {
           setIsLoading(false);
         }
-      });
+      }
+    }
+
+    void loadRoute();
 
     return () => {
       isMounted = false;
     };
-  }, [routeId]);
+  }, [initialRoute, routeId]);
 
   function openCheckIn(stopIndex: number) {
     setSelectedStopIndex(stopIndex);
@@ -104,6 +114,7 @@ export function WalkerRouteScreen({ routeId }: { routeId: string }) {
     setSelectedCandidateId(null);
 
     try {
+      const { getEmbedding } = await import("../lib/clip.js");
       const embedding = await getEmbedding(photo);
       const result = await checkIn(routeId, embedding);
       setCheckInResult(result);

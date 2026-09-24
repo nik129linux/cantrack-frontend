@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { createDog, enrollEmbedding, fetchDogs } from "../lib/api.js";
-import { getEmbedding } from "../lib/clip.js";
 
 type Dog = {
   id: string;
@@ -82,22 +81,24 @@ export function OwnerDogsScreen() {
   useEffect(() => {
     let isMounted = true;
 
-    void fetchDogs()
-      .then((loadedDogs) => {
+    async function loadDogs() {
+      try {
+        const loadedDogs = await fetchDogs();
         if (isMounted) {
           setDogs(loadedDogs);
         }
-      })
-      .catch((error: unknown) => {
+      } catch (error: unknown) {
         if (isMounted) {
           setDogsError(getErrorMessage(error, "Unable to load dogs."));
         }
-      })
-      .finally(() => {
+      } finally {
         if (isMounted) {
           setIsLoadingDogs(false);
         }
-      });
+      }
+    }
+
+    void loadDogs();
 
     return () => {
       isMounted = false;
@@ -165,6 +166,7 @@ export function OwnerDogsScreen() {
     setEnrollmentSuccess(null);
     setIsEnrolling(true);
     try {
+      const { getEmbedding } = await import("../lib/clip.js");
       const embeddings = await Promise.all(photos.map((photo) => getEmbedding(photo)));
       const embedding = averageEmbeddings(embeddings);
       await enrollEmbedding(selectedDogId, embedding);

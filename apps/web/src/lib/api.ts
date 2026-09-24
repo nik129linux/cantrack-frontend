@@ -85,6 +85,10 @@ export function enrollEmbedding(dogId: string, embedding: number[]): Promise<Dog
   });
 }
 
+export function fetchRoutes(): Promise<Route[]> {
+  return request<Route[]>("/routes");
+}
+
 export function fetchRoute(routeId: string): Promise<Route> {
   return request<Route>(`/routes/${encodeURIComponent(routeId)}`);
 }
