@@ -11,6 +11,9 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@nestjs/testing": "^11.0.0",
+    "@types/supertest": "^6.0.0",
+    "supertest": "^7.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }
