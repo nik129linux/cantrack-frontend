@@ -1,0 +1,17 @@
+{
+  "name": "cantrack",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Operations software for neighbourhood dog walkers. Estructuras de Datos final project, UCC 2026-2.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
