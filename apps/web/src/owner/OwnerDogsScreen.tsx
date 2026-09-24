@@ -14,6 +14,26 @@ type NewDog = {
   breed?: string;
 };
 
+const dogToneNames = ["mint", "coral", "yellow", "sky", "green"] as const;
+
+function getDogToneClass(index: number): string {
+  return `dog-list__item--${dogToneNames[index % dogToneNames.length] ?? "mint"}`;
+}
+
+function DogPawIcon() {
+  return (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <ellipse cx="19" cy="23" rx="7" ry="9" fill="currentColor" />
+      <ellipse cx="32" cy="17" rx="7" ry="9" fill="currentColor" />
+      <ellipse cx="45" cy="23" rx="7" ry="9" fill="currentColor" />
+      <path
+        d="M32 28c-9 0-17 8-17 16 0 6 5 10 11 10 3 0 4-2 6-2s3 2 6 2c6 0 11-4 11-10 0-8-8-16-17-16Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "message" in error) {
     const message = (error as { message?: unknown }).message;
@@ -187,23 +207,35 @@ export function OwnerDogsScreen() {
   const selectedDog = dogs.find((dog) => dog.id === selectedDogId);
 
   return (
-    <main ref={screenRef} data-cantrack-owner-dogs-screen>
+    <main ref={screenRef} className="owner-screen" data-cantrack-owner-dogs-screen>
       <h1>My dogs</h1>
 
-      <section aria-labelledby="dog-list-heading">
+      <section className="owner-screen__section--list" aria-labelledby="dog-list-heading">
         <h2 id="dog-list-heading">Dogs</h2>
         {isLoadingDogs ? <p>Loading dogs...</p> : null}
         {dogsError !== null ? <p role="alert">{dogsError}</p> : null}
-        {!isLoadingDogs && dogs.length === 0 ? <p>No dogs yet.</p> : null}
+        {!isLoadingDogs && dogs.length === 0 ? (
+          <div className="owner-empty">
+            <span className="owner-empty__illustration" aria-hidden="true">
+              <DogPawIcon />
+            </span>
+            <p>No dogs yet.</p>
+          </div>
+        ) : null}
         {dogs.length > 0 ? (
-          <ul>
-            {dogs.map((dog) => (
-              <li key={dog.id}>
-                <div>
-                  <strong>{dog.name}</strong>
-                  {dog.breed !== null && dog.breed !== undefined ? (
-                    <span> {dog.breed}</span>
-                  ) : null}
+          <ul className="dog-list">
+            {dogs.map((dog, dogIndex) => (
+              <li className={`dog-list__item ${getDogToneClass(dogIndex)}`} key={dog.id}>
+                <div className="dog-list__identity">
+                  <span className="dog-list__icon" aria-hidden="true">
+                    <DogPawIcon />
+                  </span>
+                  <div className="dog-list__copy">
+                    <strong>{dog.name}</strong>
+                    {dog.breed !== null && dog.breed !== undefined ? (
+                      <span className="dog-list__meta">{dog.breed}</span>
+                    ) : null}
+                  </div>
                 </div>
                 <button
                   className="form-button form-button--secondary"
@@ -218,7 +250,7 @@ export function OwnerDogsScreen() {
         ) : null}
       </section>
 
-      <section aria-labelledby="add-dog-heading">
+      <section className="owner-screen__section--form" aria-labelledby="add-dog-heading">
         <h2 id="add-dog-heading">Add a dog</h2>
         <form onSubmit={handleCreateDog} noValidate>
           <div className="form-field">
@@ -255,7 +287,7 @@ export function OwnerDogsScreen() {
       </section>
 
       {selectedDog !== undefined ? (
-        <section aria-labelledby="enrollment-heading">
+        <section className="owner-screen__section--enrollment" aria-labelledby="enrollment-heading">
           <h2 id="enrollment-heading">Enroll photos for {selectedDog.name}</h2>
           <form onSubmit={handleEnrollment} noValidate>
             <div className="form-field">

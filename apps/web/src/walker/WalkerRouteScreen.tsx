@@ -7,6 +7,21 @@ import {
   type Route,
 } from "../lib/api.js";
 
+const routeToneNames = ["mint", "coral", "yellow", "sky", "green"] as const;
+
+function getRouteStopToneClass(index: number): string {
+  return `route-stop--${routeToneNames[index % routeToneNames.length] ?? "mint"}`;
+}
+
+function RouteStopIcon() {
+  return (
+    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <circle cx="32" cy="32" r="22" fill="none" stroke="currentColor" strokeWidth="5" />
+      <path d="M32 19v14l10 7" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="5" />
+    </svg>
+  );
+}
+
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "message" in error) {
     const message = (error as { message?: unknown }).message;
@@ -148,16 +163,23 @@ export function WalkerRouteScreen({
       : undefined;
 
   return (
-    <main ref={screenRef} data-cantrack-walker-route-screen>
-      <h1>Walker route</h1>
-      <button
-        className="form-button form-button--secondary"
-        type="button"
-        onClick={() => void handleUndo()}
-        disabled={isUndoing}
-      >
-        Undo
-      </button>
+    <main ref={screenRef} className="walker-screen" data-cantrack-walker-route-screen>
+      <header className="walker-screen__header">
+        <h1>Walker route</h1>
+        <span className="walker-screen__illustration" aria-hidden="true">
+          <RouteStopIcon />
+        </span>
+      </header>
+      <div className="walker-screen__tools">
+        <button
+          className="form-button form-button--secondary"
+          type="button"
+          onClick={() => void handleUndo()}
+          disabled={isUndoing}
+        >
+          Undo
+        </button>
+      </div>
       {undoMessage !== null ? <p role="status">{undoMessage}</p> : null}
       {undoError !== null ? <p role="alert">{undoError}</p> : null}
 
@@ -167,9 +189,20 @@ export function WalkerRouteScreen({
       {route !== null ? (
         <ol aria-label="Route stops">
           {route.stops.map((stop, stopIndex) => (
-            <li data-testid="route-stop" key={`${stop.dogId}-${stopIndex}`}>
-              <strong>{stop.dogName ?? stop.dogId}</strong>
-              <time dateTime={stop.pickupTime}>{stop.pickupTime}</time>
+            <li
+              className={`route-stop ${getRouteStopToneClass(stopIndex)}`}
+              data-testid="route-stop"
+              key={`${stop.dogId}-${stopIndex}`}
+            >
+              <div className="route-stop__row">
+                <span className="route-stop__icon" aria-hidden="true">
+                  <RouteStopIcon />
+                </span>
+                <div className="route-stop__copy">
+                  <strong>{stop.dogName ?? stop.dogId}</strong>
+                  <time dateTime={stop.pickupTime}>{stop.pickupTime}</time>
+                </div>
+              </div>
               <button
                 className="form-button form-button--primary"
                 type="button"

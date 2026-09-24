@@ -13,6 +13,12 @@ import "./app-shell.css";
 
 type AuthView = "signup" | "login" | "reset";
 
+const routeToneNames = ["mint", "coral", "yellow", "sky", "green"] as const;
+
+function getRouteToneClass(index: number): string {
+  return `route-card--${routeToneNames[index % routeToneNames.length] ?? "mint"}`;
+}
+
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "message" in error) {
     const message = (error as { message?: unknown }).message;
@@ -52,7 +58,7 @@ function AuthShell() {
   const [view, setView] = useState<AuthView>("signup");
 
   return (
-    <div className="app-shell__panel app-shell__panel--auth">
+    <div className="app-shell__panel app-shell__panel--auth auth-panel auth-panel--mint">
       <header className="app-shell__brand">
         <span className="app-shell__brand-mark" aria-hidden="true">C</span>
         <div>
@@ -121,7 +127,7 @@ function RouteList({ onOpen }: { onOpen: (route: Route) => void }) {
   }, []);
 
   return (
-    <div className="route-dashboard">
+    <div className="route-dashboard route-dashboard--sky">
       <header className="route-dashboard__header">
         <div>
           <p className="app-shell__eyebrow">Today’s schedule</p>
@@ -151,7 +157,7 @@ function RouteList({ onOpen }: { onOpen: (route: Route) => void }) {
             return (
               <li key={route.id}>
                 <button
-                  className="route-card"
+                  className={`route-card ${getRouteToneClass(routeIndex)}`}
                   type="button"
                   onClick={() => onOpen(route)}
                 >
@@ -179,7 +185,7 @@ function WalkerDashboard() {
 
   if (selectedRoute !== null) {
     return (
-      <div className="app-shell__panel route-detail">
+      <div className="app-shell__panel route-detail route-detail--sky">
         <button
           className="route-detail__back"
           type="button"
@@ -193,7 +199,7 @@ function WalkerDashboard() {
   }
 
   return (
-    <div className="app-shell__panel">
+    <div className="app-shell__panel app-shell__panel--routes">
       <RouteList onOpen={setSelectedRoute} />
     </div>
   );
@@ -254,7 +260,7 @@ export function App() {
       {authError !== null ? <p className="app-shell__alert" role="alert">{authError}</p> : null}
       {session === null ? <AuthShell /> : null}
       {role === "owner" ? (
-        <div className="app-shell__panel">
+        <div className="app-shell__panel app-shell__panel--owner">
           <OwnerDogsScreen />
         </div>
       ) : null}
