@@ -14,6 +14,30 @@ export type CreateDogInput = {
   notes?: string;
 };
 
+export type RouteStop = {
+  dogId: string;
+  dogName?: string | null;
+  pickupTime: string;
+};
+
+export type Route = {
+  id: string;
+  stops: RouteStop[];
+};
+
+export type CheckInCandidate = {
+  dogId: string;
+  similarity: number;
+};
+
+export type CheckInResult =
+  | { dogId: string; autoConfirmed: true }
+  | { autoConfirmed: false; candidates: CheckInCandidate[] };
+
+export type UndoCheckInResult = {
+  message: string;
+};
+
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
 type RequestOptions = {
@@ -58,5 +82,22 @@ export function enrollEmbedding(dogId: string, embedding: number[]): Promise<Dog
   return request<Dog>(`/dogs/${encodeURIComponent(dogId)}/embedding`, {
     method: "POST",
     body: JSON.stringify({ embedding }),
+  });
+}
+
+export function fetchRoute(routeId: string): Promise<Route> {
+  return request<Route>(`/routes/${encodeURIComponent(routeId)}`);
+}
+
+export function checkIn(routeId: string, embedding: number[]): Promise<CheckInResult> {
+  return request<CheckInResult>(`/routes/${encodeURIComponent(routeId)}/checkin`, {
+    method: "POST",
+    body: JSON.stringify({ embedding }),
+  });
+}
+
+export function undoCheckIn(routeId: string): Promise<UndoCheckInResult> {
+  return request<UndoCheckInResult>(`/routes/${encodeURIComponent(routeId)}/checkin/undo`, {
+    method: "DELETE",
   });
 }
