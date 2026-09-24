@@ -206,6 +206,7 @@ export function OwnerDogsScreen() {
                   ) : null}
                 </div>
                 <button
+                  className="form-button form-button--secondary"
                   type="button"
                   onClick={() => openEnrollment(dog.id)}
                 >
@@ -220,27 +221,33 @@ export function OwnerDogsScreen() {
       <section aria-labelledby="add-dog-heading">
         <h2 id="add-dog-heading">Add a dog</h2>
         <form onSubmit={handleCreateDog} noValidate>
-          <div>
-            <label htmlFor="dog-name">Name</label>
+          <div className="form-field">
+            <label className="form-label" htmlFor="dog-name">Name</label>
             <input
               id="dog-name"
+              className="form-input"
               name="name"
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
           </div>
-          <div>
-            <label htmlFor="dog-breed">Breed</label>
+          <div className="form-field">
+            <label className="form-label" htmlFor="dog-breed">Breed</label>
             <input
               id="dog-breed"
+              className="form-input"
               name="breed"
               type="text"
               value={breed}
               onChange={(event) => setBreed(event.target.value)}
             />
           </div>
-          <button type="submit" disabled={isCreating}>
+          <button
+            className="form-button form-button--primary form-button--block"
+            type="submit"
+            disabled={isCreating}
+          >
             Add dog
           </button>
         </form>
@@ -251,10 +258,11 @@ export function OwnerDogsScreen() {
         <section aria-labelledby="enrollment-heading">
           <h2 id="enrollment-heading">Enroll photos for {selectedDog.name}</h2>
           <form onSubmit={handleEnrollment} noValidate>
-            <div>
-              <label htmlFor="reference-photos">Reference photos (exactly 3)</label>
+            <div className="form-field">
+              <label className="form-label" htmlFor="reference-photos">Reference photos (exactly 3)</label>
               <input
                 id="reference-photos"
+                className="form-file"
                 name="reference-photos"
                 type="file"
                 accept="image/*"
@@ -262,10 +270,18 @@ export function OwnerDogsScreen() {
                 onChange={handlePhotosChange}
               />
             </div>
-            <button type="submit" disabled={isEnrolling}>
+            <button
+              className="form-button form-button--primary form-button--block"
+              type="submit"
+              disabled={isEnrolling}
+            >
               Save enrollment
             </button>
-            <button type="button" onClick={() => setSelectedDogId(null)}>
+            <button
+              className="form-button form-button--secondary form-button--block"
+              type="button"
+              onClick={() => setSelectedDogId(null)}
+            >
               Cancel enrollment
             </button>
           </form>

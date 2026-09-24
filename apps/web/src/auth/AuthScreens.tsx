@@ -86,40 +86,54 @@ export function SignupScreen() {
     <main ref={screenRef} data-cantrack-auth-screen>
       <h1>Sign up</h1>
       <form onSubmit={handleSubmit} noValidate>
-        <div>
-          <label htmlFor="signup-email">Email</label>
+        <div className="form-field">
+          <label className="form-label" htmlFor="signup-email">Email</label>
           <input
             id="signup-email"
+            className="form-input"
             name="email"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
         </div>
-        <div>
-          <label htmlFor="signup-password">Password</label>
+        <div className="form-field">
+          <label className="form-label" htmlFor="signup-password">Password</label>
           <input
             id="signup-password"
+            className="form-input"
             name="password"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
         </div>
-        <fieldset>
+        <fieldset className="role-picker">
           <legend>Role</legend>
-          <label htmlFor="signup-role-walker">Walker</label>
+          <label
+            className="role-picker__label role-picker__label--walker"
+            htmlFor="signup-role-walker"
+          >
+            Walker
+          </label>
           <input
             id="signup-role-walker"
+            className="role-picker__input role-picker__input--walker"
             name="role"
             type="radio"
             value="walker"
             checked={role === "walker"}
             onChange={() => setRole("walker")}
           />
-          <label htmlFor="signup-role-owner">Owner</label>
+          <label
+            className="role-picker__label role-picker__label--owner"
+            htmlFor="signup-role-owner"
+          >
+            Owner
+          </label>
           <input
             id="signup-role-owner"
+            className="role-picker__input role-picker__input--owner"
             name="role"
             type="radio"
             value="owner"
@@ -127,7 +141,11 @@ export function SignupScreen() {
             onChange={() => setRole("owner")}
           />
         </fieldset>
-        <button type="submit" disabled={isSubmitting}>
+        <button
+          className="form-button form-button--primary form-button--block"
+          type="submit"
+          disabled={isSubmitting}
+        >
           Sign up
         </button>
       </form>
@@ -178,27 +196,33 @@ export function LoginScreen() {
     <main ref={screenRef} data-cantrack-auth-screen>
       <h1>Log in</h1>
       <form onSubmit={handleSubmit} noValidate>
-        <div>
-          <label htmlFor="login-email">Email</label>
+        <div className="form-field">
+          <label className="form-label" htmlFor="login-email">Email</label>
           <input
             id="login-email"
+            className="form-input"
             name="email"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
         </div>
-        <div>
-          <label htmlFor="login-password">Password</label>
+        <div className="form-field">
+          <label className="form-label" htmlFor="login-password">Password</label>
           <input
             id="login-password"
+            className="form-input"
             name="password"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
         </div>
-        <button type="submit" disabled={isSubmitting}>
+        <button
+          className="form-button form-button--primary form-button--block"
+          type="submit"
+          disabled={isSubmitting}
+        >
           Log in
         </button>
       </form>
@@ -249,17 +273,22 @@ export function ResetPasswordScreen() {
         <p role="status">Check your email for a password reset link.</p>
       ) : (
         <form onSubmit={handleSubmit} noValidate>
-          <div>
-            <label htmlFor="reset-email">Email</label>
+          <div className="form-field">
+            <label className="form-label" htmlFor="reset-email">Email</label>
             <input
               id="reset-email"
+              className="form-input"
               name="email"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
           </div>
-          <button type="submit" disabled={isSubmitting}>
+          <button
+            className="form-button form-button--primary form-button--block"
+            type="submit"
+            disabled={isSubmitting}
+          >
             Reset password
           </button>
         </form>

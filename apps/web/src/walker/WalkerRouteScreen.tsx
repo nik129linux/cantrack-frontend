@@ -150,7 +150,12 @@ export function WalkerRouteScreen({
   return (
     <main ref={screenRef} data-cantrack-walker-route-screen>
       <h1>Walker route</h1>
-      <button type="button" onClick={() => void handleUndo()} disabled={isUndoing}>
+      <button
+        className="form-button form-button--secondary"
+        type="button"
+        onClick={() => void handleUndo()}
+        disabled={isUndoing}
+      >
         Undo
       </button>
       {undoMessage !== null ? <p role="status">{undoMessage}</p> : null}
@@ -165,15 +170,20 @@ export function WalkerRouteScreen({
             <li data-testid="route-stop" key={`${stop.dogId}-${stopIndex}`}>
               <strong>{stop.dogName ?? stop.dogId}</strong>
               <time dateTime={stop.pickupTime}>{stop.pickupTime}</time>
-              <button type="button" onClick={() => openCheckIn(stopIndex)}>
+              <button
+                className="form-button form-button--primary"
+                type="button"
+                onClick={() => openCheckIn(stopIndex)}
+              >
                 Check in
               </button>
 
               {selectedStopIndex === stopIndex ? (
-                <div>
-                  <label htmlFor={`check-in-photo-${stopIndex}`}>Check-in photo</label>
+                <div className="form-field">
+                  <label className="form-label" htmlFor={`check-in-photo-${stopIndex}`}>Check-in photo</label>
                   <input
                     id={`check-in-photo-${stopIndex}`}
+                    className="form-file"
                     type="file"
                     accept="image/*"
                     capture="environment"
@@ -194,13 +204,14 @@ export function WalkerRouteScreen({
       ) : null}
 
       {checkInResult?.autoConfirmed === false ? (
-        <fieldset>
+        <fieldset className="choice-picker">
           <legend>Which dog?</legend>
           {checkInResult.candidates.map((candidate) => {
             const stop = route?.stops.find((routeStop) => routeStop.dogId === candidate.dogId);
             return (
-              <label key={candidate.dogId}>
+              <label className="choice-chip" key={candidate.dogId}>
                 <input
+                  className="choice-chip__input"
                   type="radio"
                   name="check-in-dog"
                   value={candidate.dogId}
