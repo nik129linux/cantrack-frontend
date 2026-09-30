@@ -2,28 +2,26 @@
   "name": "cantrack",
   "private": true,
   "version": "0.1.0",
-  "description": "Operations software for neighbourhood dog walkers. Estructuras de Datos final project, UCC 2026-2.",
+  "description": "Operations software for neighbourhood dog walkers. Estructuras de Datos final project, UCC 2026-2. Python (FastAPI) API + TypeScript (React) web.",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "test": "vitest run",
+    "test:api": "cd apps/api-py && uv run pytest -q",
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "@nestjs/testing": "^11.0.0",
     "@supabase/supabase-js": "^2.45.0",
     "@testing-library/jest-dom": "^6.6.0",
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.5.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@types/supertest": "^6.0.0",
     "@vitejs/plugin-react": "^4.3.0",
     "jsdom": "^25.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "supertest": "^7.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }

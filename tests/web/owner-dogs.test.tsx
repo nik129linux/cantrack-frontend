@@ -3,28 +3,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-// FR-04: owner CRUD dogs. FR-05: enroll a dog with 3 reference photos,
-// each embedded (CLIP) and stored.
+// FR-04: owner CRUD dogs. FR-05: enroll a dog with 3 reference photos.
 //
-// The actual CLIP model (transformers.js) is NOT run in this suite — loading
-// and running it is slow/network-dependent and belongs to a manual/e2e check,
-// not this fast unit suite. Instead, apps/web/src/lib/clip.ts must export a
-// getEmbedding(image: Blob): Promise<number[]> function that the enrollment
-// screen calls per photo; this test mocks THAT module boundary and asserts
-// the screen calls it and forwards the result to the API. See AGENTS.md.
-
-const mockGetEmbedding = vi.fn();
-vi.mock("../../apps/web/src/lib/clip.js", () => ({
-  getEmbedding: mockGetEmbedding,
-}));
+// The photos are uploaded to the API, which embeds them on the server (layers: web -> API -> AI).
+// The browser must never run the image model: this screen only forwards the File objects through
+// enrollPhotos(dogId, files) in apps/web/src/lib/api.ts, which is mocked here.
 
 const mockFetchDogs = vi.fn();
 const mockCreateDog = vi.fn();
-const mockEnrollEmbedding = vi.fn();
+const mockEnrollPhotos = vi.fn();
 vi.mock("../../apps/web/src/lib/api.js", () => ({
   fetchDogs: mockFetchDogs,
   createDog: mockCreateDog,
-  enrollEmbedding: mockEnrollEmbedding,
+  enrollPhotos: mockEnrollPhotos,
 }));
 
 async function importScreen() {
@@ -37,10 +28,9 @@ function makePhotoFile(name: string): File {
 
 describe("Owner dogs screen (FR-04, FR-05)", () => {
   beforeEach(() => {
-    mockGetEmbedding.mockReset();
     mockFetchDogs.mockReset();
     mockCreateDog.mockReset();
-    mockEnrollEmbedding.mockReset();
+    mockEnrollPhotos.mockReset();
     mockFetchDogs.mockResolvedValue([]);
   });
 
@@ -86,13 +76,9 @@ describe("Owner dogs screen (FR-04, FR-05)", () => {
     expect(mockCreateDog).not.toHaveBeenCalled();
   });
 
-  it("enrolls a dog with 3 photos: embeds each and submits the embedding", async () => {
+  it("enrolls a dog with 3 photos: uploads the files to the API untouched", async () => {
     mockFetchDogs.mockResolvedValue([{ id: "dog-1", name: "Firulais", breed: "Mixed" }]);
-    mockGetEmbedding
-      .mockResolvedValueOnce([0.1, 0.2, 0.3])
-      .mockResolvedValueOnce([0.15, 0.22, 0.28])
-      .mockResolvedValueOnce([0.12, 0.19, 0.31]);
-    mockEnrollEmbedding.mockResolvedValueOnce({ id: "dog-1", embedding: [0.12, 0.2, 0.3] });
+    mockEnrollPhotos.mockResolvedValueOnce({ id: "dog-1", name: "Firulais" });
 
     const { OwnerDogsScreen } = await importScreen();
     const user = userEvent.setup();
@@ -101,22 +87,40 @@ describe("Owner dogs screen (FR-04, FR-05)", () => {
     await screen.findByText("Firulais");
     await user.click(screen.getByRole("button", { name: /enroll photos/i }));
 
-    const fileInput = screen.getByLabelText(/reference photos/i);
-    await user.upload(fileInput, [
+    const photos = [
       makePhotoFile("photo1.png"),
       makePhotoFile("photo2.png"),
       makePhotoFile("photo3.png"),
-    ]);
-
+    ];
+    await user.upload(screen.getByLabelText(/reference photos/i), photos);
     await user.click(screen.getByRole("button", { name: /save enrollment/i }));
 
-    await waitFor(() => expect(mockGetEmbedding).toHaveBeenCalledTimes(3));
-    await waitFor(() =>
-      expect(mockEnrollEmbedding).toHaveBeenCalledWith(
-        "dog-1",
-        expect.any(Array),
-      ),
-    );
+    await waitFor(() => expect(mockEnrollPhotos).toHaveBeenCalledTimes(1));
+    const [dogId, files] = mockEnrollPhotos.mock.calls[0] as [string, File[]];
+    expect(dogId).toBe("dog-1");
+    expect(files.map((f) => f.name)).toEqual(["photo1.png", "photo2.png", "photo3.png"]);
+    expect(await screen.findByText(/enrollment saved/i)).toBeInTheDocument();
+  });
+
+  it("shows the API's message when enrollment fails", async () => {
+    mockFetchDogs.mockResolvedValue([{ id: "dog-1", name: "Firulais", breed: "Mixed" }]);
+    mockEnrollPhotos.mockRejectedValueOnce(new Error("Unreadable image."));
+
+    const { OwnerDogsScreen } = await importScreen();
+    const user = userEvent.setup();
+    render(<OwnerDogsScreen />);
+
+    await screen.findByText("Firulais");
+    await user.click(screen.getByRole("button", { name: /enroll photos/i }));
+    await user.upload(screen.getByLabelText(/reference photos/i), [
+      makePhotoFile("a.png"),
+      makePhotoFile("b.png"),
+      makePhotoFile("c.png"),
+    ]);
+    await user.click(screen.getByRole("button", { name: /save enrollment/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/unreadable image/i);
+    expect(screen.queryByText(/enrollment saved/i)).not.toBeInTheDocument();
   });
 
   it("rejects enrollment with fewer than 3 photos", async () => {
@@ -134,6 +138,6 @@ describe("Owner dogs screen (FR-04, FR-05)", () => {
     await user.click(screen.getByRole("button", { name: /save enrollment/i }));
 
     expect(await screen.findByText(/3 photos/i)).toBeInTheDocument();
-    expect(mockGetEmbedding).not.toHaveBeenCalled();
+    expect(mockEnrollPhotos).not.toHaveBeenCalled();
   });
 });

@@ -1,8 +1,4 @@
 packages:
-  - "packages/*"
-  - "apps/*"
+  - "apps/web"
 allowBuilds:
   esbuild: true
-  onnxruntime-node: true
-  protobufjs: true
-  sharp: true

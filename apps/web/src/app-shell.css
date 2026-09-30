@@ -456,7 +456,7 @@ button:disabled {
 .app-shell__panel {
   position: relative;
   width: 100%;
-  overflow: hidden;
+  overflow: clip;
   padding: clamp(22px, 5vw, 38px);
   border: 1px solid oklch(0.87 0.035 155 / 70%);
   border-radius: 28px;

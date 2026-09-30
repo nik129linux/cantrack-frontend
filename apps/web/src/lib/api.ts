@@ -5,7 +5,6 @@ export type Dog = {
   name: string;
   breed?: string | null;
   notes?: string | null;
-  embedding?: number[] | null;
 };
 
 export type CreateDogInput = {
@@ -25,14 +24,34 @@ export type Route = {
   stops: RouteStop[];
 };
 
+/** What the server-side vision model made of the photo, when it answered. */
+export type AiNote = {
+  dogVisible: boolean | null;
+  note: string | null;
+};
+
 export type CheckInCandidate = {
   dogId: string;
+  dogName: string | null;
   similarity: number;
 };
 
 export type CheckInResult =
-  | { dogId: string; autoConfirmed: true }
-  | { autoConfirmed: false; candidates: CheckInCandidate[] };
+  | {
+      autoConfirmed: true;
+      dogId: string;
+      dogName: string | null;
+      similarity: number;
+      checkinId: string;
+      ai: AiNote;
+    }
+  | { autoConfirmed: false; candidates: CheckInCandidate[]; ai: AiNote };
+
+export type ConfirmCheckInResult = {
+  dogId: string;
+  dogName: string | null;
+  checkinId: string;
+};
 
 export type UndoCheckInResult = {
   message: string;
@@ -42,12 +61,77 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
 type RequestOptions = {
   method?: string;
-  body?: string;
+  body?: string | FormData;
 };
+
+/**
+ * One validation problem out of a FastAPI `{"detail": [...]}` list, e.g.
+ * `{"loc": ["body", "name"], "msg": "String should have at least 1 character"}`.
+ * The `body`/`query`/`path` prefix is not part of the field name, so it is dropped:
+ * "name: String should have at least 1 character".
+ */
+function formatValidationIssue(issue: unknown): string {
+  if (typeof issue !== "object" || issue === null) {
+    return "";
+  }
+
+  const { loc, msg } = issue as { loc?: unknown; msg?: unknown };
+  const message = typeof msg === "string" ? msg : "";
+  const field = Array.isArray(loc)
+    ? loc
+        .filter((part) => part !== "body" && part !== "query" && part !== "path")
+        .map((part) => String(part))
+        .join(".")
+    : "";
+
+  if (field.length === 0) {
+    return message;
+  }
+
+  return message.length === 0 ? field : `${field}: ${message}`;
+}
+
+/** Turn an error response into a readable Error. The API answers `{"detail": ...}`. */
+async function toRequestError(response: Response): Promise<Error> {
+  const text = await response.text();
+  if (text.trim().length === 0) {
+    return new Error(`Request failed with status ${response.status}.`);
+  }
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    return new Error(text);
+  }
+
+  if (typeof payload === "object" && payload !== null && "detail" in payload) {
+    const detail = (payload as { detail?: unknown }).detail;
+
+    if (typeof detail === "string" && detail.length > 0) {
+      return new Error(detail);
+    }
+
+    if (Array.isArray(detail)) {
+      const issues = detail.map(formatValidationIssue).filter((issue) => issue.length > 0);
+      if (issues.length > 0) {
+        return new Error(issues.join("; "));
+      }
+    }
+  }
+
+  return new Error(text);
+}
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { data } = await supabase.auth.getSession();
-  const headers = new Headers({ "Content-Type": "application/json" });
+  const headers = new Headers();
+
+  // A FormData body must not carry a Content-Type: the browser adds the
+  // multipart boundary itself.
+  if (typeof options.body !== "object") {
+    headers.set("Content-Type", "application/json");
+  }
 
   if (data.session?.access_token !== undefined) {
     headers.set("Authorization", `Bearer ${data.session.access_token}`);
@@ -60,8 +144,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message.length > 0 ? message : `Request failed with status ${response.status}.`);
+    throw await toRequestError(response);
   }
 
   return response.json() as Promise<T>;
@@ -78,10 +161,16 @@ export function createDog(input: CreateDogInput): Promise<Dog> {
   });
 }
 
-export function enrollEmbedding(dogId: string, embedding: number[]): Promise<Dog> {
-  return request<Dog>(`/dogs/${encodeURIComponent(dogId)}/embedding`, {
+/** Upload the reference photos; the API embeds them on the server and stores the mean vector. */
+export function enrollPhotos(dogId: string, photos: File[]): Promise<Dog> {
+  const body = new FormData();
+  for (const photo of photos) {
+    body.append("image", photo);
+  }
+
+  return request<Dog>(`/dogs/${encodeURIComponent(dogId)}/photos`, {
     method: "POST",
-    body: JSON.stringify({ embedding }),
+    body,
   });
 }
 
@@ -93,10 +182,22 @@ export function fetchRoute(routeId: string): Promise<Route> {
   return request<Route>(`/routes/${encodeURIComponent(routeId)}`);
 }
 
-export function checkIn(routeId: string, embedding: number[]): Promise<CheckInResult> {
+/** Upload the check-in photo; the API embeds it and asks the vision model on the server. */
+export function checkIn(routeId: string, photo: File): Promise<CheckInResult> {
+  const body = new FormData();
+  body.append("image", photo);
+
   return request<CheckInResult>(`/routes/${encodeURIComponent(routeId)}/checkin`, {
     method: "POST",
-    body: JSON.stringify({ embedding }),
+    body,
+  });
+}
+
+/** Confirm the dog the walker picked among the candidates of a non-confident check-in. */
+export function confirmCheckIn(routeId: string, dogId: string): Promise<ConfirmCheckInResult> {
+  return request<ConfirmCheckInResult>(`/routes/${encodeURIComponent(routeId)}/checkin/confirm`, {
+    method: "POST",
+    body: JSON.stringify({ dogId }),
   });
 }
 

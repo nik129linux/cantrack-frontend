@@ -1,11 +1,19 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   checkIn,
+  confirmCheckIn,
   fetchRoute,
   undoCheckIn,
+  type AiNote,
+  type CheckInCandidate,
   type CheckInResult,
   type Route,
 } from "../lib/api.js";
+
+/** The check-in outcome as the screen shows it, whichever way it was decided. */
+type CheckInView =
+  | { kind: "confirmed"; dogId: string; dogName: string | null; note: string | null }
+  | { kind: "candidates"; candidates: CheckInCandidate[]; note: string | null };
 
 const routeToneNames = ["mint", "coral", "yellow", "sky", "green"] as const;
 
@@ -31,6 +39,21 @@ function getErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback;
+}
+
+function readAiNote(ai: AiNote | null | undefined): string | null {
+  const note = ai?.note;
+  return typeof note === "string" && note.trim().length > 0 ? note : null;
+}
+
+function toCheckInView(result: CheckInResult): CheckInView {
+  const note = readAiNote(result.ai);
+
+  if (result.autoConfirmed) {
+    return { kind: "confirmed", dogId: result.dogId, dogName: result.dogName, note };
+  }
+
+  return { kind: "candidates", candidates: result.candidates, note };
 }
 
 function useWalkerRouteScreenMount() {
@@ -71,12 +94,14 @@ export function WalkerRouteScreen({
   const [isLoading, setIsLoading] = useState(true);
   const [routeError, setRouteError] = useState<string | null>(null);
   const [selectedStopIndex, setSelectedStopIndex] = useState<number | null>(null);
-  const [checkInResult, setCheckInResult] = useState<CheckInResult | null>(null);
+  const [checkInResult, setCheckInResult] = useState<CheckInView | null>(null);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [checkInError, setCheckInError] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const [undoError, setUndoError] = useState<string | null>(null);
   const [undoMessage, setUndoMessage] = useState<string | null>(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
   const screenRef = useWalkerRouteScreenMount();
 
@@ -115,6 +140,7 @@ export function WalkerRouteScreen({
     setCheckInResult(null);
     setSelectedCandidateId(null);
     setCheckInError(null);
+    setConfirmError(null);
   }
 
   async function handleCheckInPhoto(event: ChangeEvent<HTMLInputElement>) {
@@ -125,18 +151,41 @@ export function WalkerRouteScreen({
 
     setIsCheckingIn(true);
     setCheckInError(null);
+    setConfirmError(null);
     setCheckInResult(null);
     setSelectedCandidateId(null);
 
     try {
-      const { getEmbedding } = await import("../lib/clip.js");
-      const embedding = await getEmbedding(photo);
-      const result = await checkIn(routeId, embedding);
-      setCheckInResult(result);
+      const result = await checkIn(routeId, photo);
+      setCheckInResult(toCheckInView(result));
     } catch (error: unknown) {
       setCheckInError(getErrorMessage(error, "Unable to check in."));
     } finally {
       setIsCheckingIn(false);
+    }
+  }
+
+  async function handleConfirmCandidate() {
+    if (selectedCandidateId === null) {
+      return;
+    }
+
+    const note = checkInResult?.note ?? null;
+    setIsConfirming(true);
+    setConfirmError(null);
+    try {
+      const confirmed = await confirmCheckIn(routeId, selectedCandidateId);
+      setCheckInResult({
+        kind: "confirmed",
+        dogId: confirmed.dogId,
+        dogName: confirmed.dogName,
+        note,
+      });
+      setSelectedCandidateId(null);
+    } catch (error: unknown) {
+      setConfirmError(getErrorMessage(error, "Unable to confirm the check-in."));
+    } finally {
+      setIsConfirming(false);
     }
   }
 
@@ -157,10 +206,9 @@ export function WalkerRouteScreen({
     }
   }
 
-  const confirmedStop =
-    checkInResult?.autoConfirmed === true
-      ? route?.stops.find((stop) => stop.dogId === checkInResult.dogId)
-      : undefined;
+  function stopDogName(dogId: string): string | null {
+    return route?.stops.find((stop) => stop.dogId === dogId)?.dogName ?? null;
+  }
 
   return (
     <main ref={screenRef} className="walker-screen" data-cantrack-walker-route-screen>
@@ -230,18 +278,20 @@ export function WalkerRouteScreen({
         </ol>
       ) : null}
 
-      {checkInResult?.autoConfirmed === true ? (
-        <p role="status">
-          Checked in {confirmedStop?.dogName ?? checkInResult.dogId}.
-        </p>
+      {checkInResult?.kind === "confirmed" ? (
+        <>
+          <p role="status">
+            Checked in {checkInResult.dogName ?? stopDogName(checkInResult.dogId) ?? checkInResult.dogId}.
+          </p>
+          {checkInResult.note !== null ? <p>{checkInResult.note}</p> : null}
+        </>
       ) : null}
 
-      {checkInResult?.autoConfirmed === false ? (
-        <fieldset className="choice-picker">
-          <legend>Which dog?</legend>
-          {checkInResult.candidates.map((candidate) => {
-            const stop = route?.stops.find((routeStop) => routeStop.dogId === candidate.dogId);
-            return (
+      {checkInResult?.kind === "candidates" ? (
+        <>
+          <fieldset className="choice-picker">
+            <legend>Which dog?</legend>
+            {checkInResult.candidates.map((candidate) => (
               <label className="choice-chip" key={candidate.dogId}>
                 <input
                   className="choice-chip__input"
@@ -251,11 +301,21 @@ export function WalkerRouteScreen({
                   checked={selectedCandidateId === candidate.dogId}
                   onChange={() => setSelectedCandidateId(candidate.dogId)}
                 />
-                {stop?.dogName ?? candidate.dogId} ({Math.round(candidate.similarity * 100)}% match)
+                {candidate.dogName ?? stopDogName(candidate.dogId) ?? candidate.dogId} ({Math.round(candidate.similarity * 100)}% match)
               </label>
-            );
-          })}
-        </fieldset>
+            ))}
+            <button
+              className="form-button form-button--primary"
+              type="button"
+              onClick={() => void handleConfirmCandidate()}
+              disabled={selectedCandidateId === null || isConfirming}
+            >
+              Confirm
+            </button>
+          </fieldset>
+          {confirmError !== null ? <p role="alert">{confirmError}</p> : null}
+          {checkInResult.note !== null ? <p>{checkInResult.note}</p> : null}
+        </>
       ) : null}
 
       {checkInError !== null ? <p role="alert">{checkInError}</p> : null}

@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { createDog, enrollEmbedding, fetchDogs } from "../lib/api.js";
+import { createDog, enrollPhotos, fetchDogs } from "../lib/api.js";
 
 type Dog = {
   id: string;
   name: string;
   breed?: string | null;
   notes?: string | null;
-  embedding?: number[] | null;
 };
 
 type NewDog = {
@@ -43,17 +42,6 @@ function getErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback;
-}
-
-function averageEmbeddings(embeddings: number[][]): number[] {
-  const length = embeddings[0]?.length ?? 0;
-  if (length === 0 || embeddings.some((embedding) => embedding.length !== length)) {
-    throw new Error("The image model returned incompatible embeddings.");
-  }
-
-  return Array.from({ length }, (_, index) =>
-    embeddings.reduce((total, embedding) => total + embedding[index], 0) / embeddings.length,
-  );
 }
 
 function useOwnerDogsScreenMount() {
@@ -186,15 +174,7 @@ export function OwnerDogsScreen() {
     setEnrollmentSuccess(null);
     setIsEnrolling(true);
     try {
-      const { getEmbedding } = await import("../lib/clip.js");
-      const embeddings = await Promise.all(photos.map((photo) => getEmbedding(photo)));
-      const embedding = averageEmbeddings(embeddings);
-      await enrollEmbedding(selectedDogId, embedding);
-      setDogs((currentDogs) =>
-        currentDogs.map((dog) =>
-          dog.id === selectedDogId ? { ...dog, embedding } : dog,
-        ),
-      );
+      await enrollPhotos(selectedDogId, photos);
       setPhotos([]);
       setEnrollmentSuccess("Photo enrollment saved.");
     } catch (error: unknown) {
