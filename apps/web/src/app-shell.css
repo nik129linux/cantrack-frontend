@@ -462,7 +462,6 @@
 }
 
 .owner-screen__enrollment-tile {
-  max-width: 200px;
   margin-bottom: 14px;
 }
 
@@ -482,4 +481,159 @@
   .app-shell {
     padding: 24px 20px 0;
   }
+}
+
+/* S1 screens --------------------------------------------------------------- */
+
+.inbox-screen,
+.discover-screen,
+.profile-screen {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  min-width: 0;
+}
+
+.inbox-list,
+.discover-screen__walkers,
+.discover-screen__list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inbox-list .ui-listrow,
+.discover-screen__walkers .ui-listrow,
+.discover-screen__list .ui-listrow {
+  background: var(--c-surface);
+}
+
+.inbox-list .ui-listrow .ui-listrow__icon,
+.discover-screen__walkers .ui-listrow .ui-listrow__icon {
+  background: var(--c-mint-wash);
+  color: var(--c-green-800);
+}
+
+.inbox-detail {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border-radius: var(--radius-card);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.inbox-detail__back {
+  justify-self: start;
+}
+
+.inbox-detail__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.inbox-detail .section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.discover-screen__form,
+.discover-screen__requests,
+.profile-screen__form,
+.owner-screen__section--questionnaire {
+  padding: 20px;
+  border-radius: var(--radius-card);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.owner-screen__section--questionnaire {
+  background: var(--c-mint-wash);
+}
+
+.discover-screen__form form,
+.profile-screen__form,
+.owner-screen__section--questionnaire form {
+  display: grid;
+  gap: 4px;
+}
+
+.discover-screen__form [data-variant],
+.owner-screen__section--questionnaire [data-variant="primary"],
+.profile-screen__form [data-variant] {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.discover-screen__pin {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.discover-screen__none {
+  color: var(--c-muted);
+  font-weight: 700;
+}
+
+.discover-screen__list .ui-listrow__trailing {
+  gap: 10px;
+}
+
+.discover-screen__list .ui-listrow__trailing [data-variant] {
+  min-width: 0;
+  padding: 8px 16px;
+  font-size: var(--text-caption);
+}
+
+.profile-screen__bio {
+  resize: vertical;
+  min-height: 84px;
+}
+
+.questionnaire-check {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.questionnaire-check input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--c-green-700);
+}
+
+select.form-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%234F6A58' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  padding-right: 44px;
+}
+
+/* 390px: two trailing actions would squeeze the row copy to zero width —
+   the trailing block takes its own full-width line under the name. */
+.dog-list .ui-listrow {
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+
+.dog-list .ui-listrow__trailing {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex-basis: 100%;
+  width: 100%;
+  margin-left: 0;
+  gap: 8px;
+}
+
+.dog-list .ui-listrow__trailing [data-variant] {
+  width: 100%;
+  padding-inline: 10px;
 }

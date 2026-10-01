@@ -5,7 +5,10 @@ import {
   ResetPasswordScreen,
   SignupScreen,
 } from "./auth/AuthScreens.js";
+import { OwnerDiscoverScreen } from "./owner/OwnerDiscoverScreen.js";
 import { OwnerDogsScreen } from "./owner/OwnerDogsScreen.js";
+import { WalkerInboxScreen } from "./walker/WalkerInboxScreen.js";
+import { WalkerProfileScreen } from "./walker/WalkerProfileScreen.js";
 import { WalkerRouteScreen } from "./walker/WalkerRouteScreen.js";
 import { fetchRoutes, type Route } from "./lib/api.js";
 import { supabase } from "./lib/supabase.js";
@@ -194,13 +197,16 @@ function ComingSoon({ section }: { section: string }) {
   );
 }
 
-function WalkerShell() {
+function WalkerShell({ userId }: { userId: string }) {
   const [tab, setTab] = useState("Today");
 
   return (
     <div className="app-shell__content">
       <div className="app-shell__panel app-shell__panel--routes">
-        {tab === "Today" ? <WalkerDashboard /> : <ComingSoon section={tab} />}
+        {tab === "Today" ? <WalkerDashboard /> : null}
+        {tab === "Requests" ? <WalkerInboxScreen /> : null}
+        {tab === "Profile" ? <WalkerProfileScreen userId={userId} /> : null}
+        {tab === "Clients" ? <ComingSoon section={tab} /> : null}
       </div>
       <BottomNav role="walker" active={tab} onNavigate={setTab} />
     </div>
@@ -213,7 +219,9 @@ function OwnerShell() {
   return (
     <div className="app-shell__content">
       <div className="app-shell__panel app-shell__panel--owner">
-        {tab === "My dogs" ? <OwnerDogsScreen /> : <ComingSoon section={tab} />}
+        {tab === "My dogs" ? <OwnerDogsScreen /> : null}
+        {tab === "Discover" ? <OwnerDiscoverScreen /> : null}
+        {tab === "Activity" || tab === "Profile" ? <ComingSoon section={tab} /> : null}
       </div>
       <BottomNav role="owner" active={tab} onNavigate={setTab} />
     </div>
@@ -269,6 +277,7 @@ export function App() {
   }
 
   const role = session?.user.user_metadata.role;
+  const userId = session?.user.id ?? "";
 
   return (
     <div ref={shellRef} className="app-shell" data-cantrack-app-shell>
@@ -287,7 +296,7 @@ export function App() {
       {authError !== null ? <p className="app-shell__alert" role="alert">{authError}</p> : null}
       {session === null ? <AuthShell /> : null}
       {role === "owner" ? <OwnerShell /> : null}
-      {role === "walker" ? <WalkerShell /> : null}
+      {role === "walker" ? <WalkerShell userId={userId} /> : null}
       {session !== null && role !== "owner" && role !== "walker" ? (
         <div className="app-shell__panel app-shell__status" role="alert">
           This account does not have a walker or owner role.

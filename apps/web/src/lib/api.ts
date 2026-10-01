@@ -206,3 +206,170 @@ export function undoCheckIn(routeId: string): Promise<UndoCheckInResult> {
     method: "DELETE",
   });
 }
+
+// ---------------------------------------------------------------------------
+// S1 — Requests: walker profiles, the dog questionnaire and walk requests.
+// ---------------------------------------------------------------------------
+
+export type WalkerProfile = {
+  walkerId: string;
+  displayName: string;
+  bio: string | null;
+  serviceArea: string | null;
+  pricePerWalk: number;
+};
+
+export type SaveWalkerProfileInput = {
+  displayName: string;
+  bio: string | null;
+  serviceArea: string | null;
+  pricePerWalk: number;
+};
+
+/** The 8-field questionnaire stored in `dogs.profile`. */
+export type DogProfile = {
+  size: string;
+  temperament: string;
+  energy: string;
+  leashTrained: boolean;
+  allergies: string | null;
+  medicalNotes: string | null;
+  vetContact: string | null;
+  emergencyContact: string | null;
+};
+
+export type RequestStatus = "pending" | "accepted" | "declined" | "cancelled";
+
+/** The full request as its owner sees it. */
+export type OwnerRequestView = {
+  id: string;
+  walkerId: string;
+  walkerName: string | null;
+  dogId: string;
+  dogName: string | null;
+  status: RequestStatus;
+  requestedTime: string;
+  pickupLat: number;
+  pickupLng: number;
+  priceCop: number;
+  createdAt: string;
+  respondedAt: string | null;
+};
+
+/** The dog as the walker may see it: 4 fields while not accepted, all 10 once
+ *  the request is accepted (the API gates this by status). */
+export type WalkerRequestDog = {
+  name: string | null;
+  breed: string | null;
+  size: string | null;
+  temperament: string | null;
+  energy?: string | null;
+  leashTrained?: boolean | null;
+  allergies?: string | null;
+  medicalNotes?: string | null;
+  vetContact?: string | null;
+  emergencyContact?: string | null;
+};
+
+/** The request as the walker sees it; pin and full dog only when accepted. */
+export type WalkerRequestView = {
+  id: string;
+  status: RequestStatus;
+  requestedTime: string;
+  priceCop: number;
+  createdAt: string;
+  dog: WalkerRequestDog;
+  respondedAt?: string | null;
+  pickupLat?: number;
+  pickupLng?: number;
+};
+
+export type CreateRequestInput = {
+  walkerId: string;
+  dogId: string;
+  requestedTime: string;
+  pickupLat: number;
+  pickupLng: number;
+};
+
+export type RequestConflict = {
+  requestId: string;
+  requestedTime: string;
+};
+
+export type AcceptRequestResult = {
+  id: string;
+  status: "accepted";
+  respondedAt: string;
+  conflicts: RequestConflict[];
+};
+
+export type DeclineRequestResult = {
+  id: string;
+  status: "declined";
+  respondedAt: string;
+};
+
+export type CancelRequestResult = {
+  id: string;
+  status: "cancelled";
+};
+
+export function fetchWalkerProfiles(): Promise<WalkerProfile[]> {
+  return request<WalkerProfile[]>("/walker-profiles");
+}
+
+export function saveWalkerProfile(input: SaveWalkerProfileInput): Promise<WalkerProfile> {
+  return request<WalkerProfile>("/walker-profile", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+export function saveDogProfile(dogId: string, profile: DogProfile): Promise<DogProfile> {
+  return request<DogProfile>(`/dogs/${encodeURIComponent(dogId)}/profile`, {
+    method: "PUT",
+    body: JSON.stringify(profile),
+  });
+}
+
+export function createRequest(input: CreateRequestInput): Promise<OwnerRequestView> {
+  return request<OwnerRequestView>("/requests", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+/** The caller's requests: the owner's sent ones, or the walker's inbox
+ *  (pending oldest first). The API scopes and orders by role. */
+export function fetchRequests<T = OwnerRequestView | WalkerRequestView>(): Promise<T[]> {
+  return request<T[]>("/requests");
+}
+
+export function fetchRequest<T = OwnerRequestView | WalkerRequestView>(
+  requestId: string,
+): Promise<T> {
+  return request<T>(`/requests/${encodeURIComponent(requestId)}`);
+}
+
+/** Accepting flags (does not block) the walker's time conflicts. */
+export function acceptRequest(requestId: string): Promise<AcceptRequestResult> {
+  return request<AcceptRequestResult>(
+    `/requests/${encodeURIComponent(requestId)}/accept`,
+    { method: "POST" },
+  );
+}
+
+export function declineRequest(requestId: string): Promise<DeclineRequestResult> {
+  return request<DeclineRequestResult>(
+    `/requests/${encodeURIComponent(requestId)}/decline`,
+    { method: "POST" },
+  );
+}
+
+export function cancelRequest(requestId: string): Promise<CancelRequestResult> {
+  return request<CancelRequestResult>(
+    `/requests/${encodeURIComponent(requestId)}/cancel`,
+    { method: "POST" },
+  );
+}

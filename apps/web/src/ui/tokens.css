@@ -718,3 +718,96 @@ button.ui-listrow:hover {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* S1 polish (docs/design/POLISH-BACKLOG.md #1): the native "Choose Files"
+   button of file inputs, restyled with the kit — green pill, ink text, 44px
+   tap target and the same focus ring as the buttons. */
+
+.form-file::file-selector-button {
+  min-height: var(--tap-target);
+  min-width: var(--tap-target);
+  margin-right: 12px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: var(--radius-button);
+  background: var(--c-green);
+  color: var(--c-ink);
+  font-family: inherit;
+  font-size: var(--text-caption);
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 160ms var(--ease);
+}
+
+.form-file:hover::file-selector-button {
+  background: var(--c-sage);
+}
+
+.form-file:focus-visible::file-selector-button {
+  outline: 3px solid var(--focus-ring-color);
+  outline-offset: 3px;
+}
+
+/* S1 polish (docs/design/POLISH-BACKLOG.md #2): compact PetTile — a ~96px
+   tile with the name beside it, for panel headers (enrollment). */
+
+.ui-pet-tile--compact {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+}
+
+.ui-pet-tile--compact .ui-pet-tile__art {
+  width: 96px;
+  height: 96px;
+  flex: 0 0 96px;
+  aspect-ratio: auto;
+  border-radius: var(--radius-tile);
+}
+
+.ui-pet-tile--compact .ui-pet-tile__name {
+  font-size: var(--text-body);
+}
+
+/* Detail rows (request detail, S1): label left, value right. */
+
+.ui-detail {
+  display: grid;
+  gap: 2px;
+}
+
+.ui-detail__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 2px;
+  border-bottom: 1px solid rgb(20 48 31 / 8%);
+}
+
+.ui-detail__label {
+  color: var(--c-muted);
+  font-size: var(--text-caption);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ui-detail__value {
+  color: var(--c-ink);
+  font-weight: 700;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* Inline client-side validation errors (no role: these are form hints, the
+   API errors are the ones announced as alerts). */
+
+.form-error {
+  margin: 4px 0 10px;
+  color: var(--c-coral-700);
+  font-size: var(--text-caption);
+  font-weight: 800;
+}

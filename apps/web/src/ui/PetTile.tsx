@@ -30,6 +30,8 @@ export type PetTileProps = HTMLAttributes<HTMLDivElement> & {
   distance?: string;
   favorite?: boolean;
   onToggleFavorite?: () => void;
+  /** "compact" renders a ~96px tile with the name beside it (panel headers). */
+  size?: "full" | "compact";
 };
 
 /** Square pet card: pastel tint rotated per dog, art, name, distance chip, heart. */
@@ -40,12 +42,14 @@ export function PetTile({
   distance,
   favorite = false,
   onToggleFavorite,
+  size = "full",
   ...rest
 }: PetTileProps) {
   const [imageBroken, setImageBroken] = useState(false);
+  const className = size === "compact" ? "ui-pet-tile ui-pet-tile--compact" : "ui-pet-tile";
 
   return (
-    <div className="ui-pet-tile" data-tint={petTintFor(dogId)} {...rest}>
+    <div className={className} data-tint={petTintFor(dogId)} {...rest}>
       <div className="ui-pet-tile__art">
         {imageSrc !== undefined && imageSrc !== "" && !imageBroken ? (
           <img src={imageSrc} alt={name} onError={() => setImageBroken(true)} />
