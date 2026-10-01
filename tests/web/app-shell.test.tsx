@@ -30,8 +30,16 @@ vi.mock("../../apps/web/src/lib/supabase.js", () => ({
 }));
 
 const mockFetchRoutes = vi.fn();
+// Every export the mounted screens call must exist on the mock: vitest throws when a missing
+// export is accessed, and that error lands on whichever test happens to be running (flaky
+// "renders the four owner tabs"). Unused-by-this-file calls resolve to empty data.
 vi.mock("../../apps/web/src/lib/api.js", () => ({
   fetchRoutes: mockFetchRoutes,
+  fetchDogs: vi.fn().mockResolvedValue([]),
+  fetchWalkerProfiles: vi.fn().mockResolvedValue([]),
+  fetchWalkerProfile: vi.fn().mockResolvedValue(null),
+  fetchRequests: vi.fn().mockResolvedValue([]),
+  fetchRequest: vi.fn().mockResolvedValue(null),
 }));
 
 async function importApp() {
