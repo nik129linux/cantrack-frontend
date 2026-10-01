@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+// Separate import line on purpose: the S0 additions below need `within` and the
+// existing lines of this file stay byte-identical (no existing test touched).
+import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // The app shell: routes between the auth screens (logged out) and a
@@ -109,5 +112,147 @@ describe("App shell", () => {
     await user.click(routeLink);
 
     await waitFor(() => expect(screen.getByText("Firulais")).toBeInTheDocument());
+  });
+});
+
+// S0 (UI kit) shell integration. App must render the role-based BottomNav as a
+// "Main" navigation with the exact tabs per role (DESIGN.md "Screens per role"),
+// mark the active tab with aria-current, show a "Coming soon" EmptyState for
+// tabs whose feature does not exist yet, keep the existing screens reachable
+// from their tab (walker "Today" -> route list, owner "My dogs" ->
+// OwnerDogsScreen), and actually load the kit tokens stylesheet. These cases
+// are ADDITIVE — the "App shell" describe above is untouched — and are red
+// until s0-impl wires BottomNav + tokens.css into the shell.
+
+describe("App shell — S0 role-based bottom navigation", () => {
+  beforeEach(() => {
+    mockGetSession.mockReset();
+    mockFetchRoutes.mockReset();
+    mockOnAuthStateChange.mockReset();
+    mockOnAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+  });
+
+  it("renders the four walker tabs in the Main navigation", async () => {
+    mockGetSession.mockResolvedValue({ data: walkerSession() });
+    mockFetchRoutes.mockResolvedValue([]);
+
+    const { App } = await importApp();
+    render(<App />);
+
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    expect(within(nav).getAllByRole("button").map((tab) => tab.textContent?.trim())).toEqual([
+      "Today",
+      "Clients",
+      "Requests",
+      "Profile",
+    ]);
+  });
+
+  it("renders the four owner tabs in the Main navigation", async () => {
+    mockGetSession.mockResolvedValue({ data: ownerSession() });
+
+    const { App } = await importApp();
+    render(<App />);
+
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    expect(within(nav).getAllByRole("button").map((tab) => tab.textContent?.trim())).toEqual([
+      "Discover",
+      "My dogs",
+      "Activity",
+      "Profile",
+    ]);
+  });
+
+  it("lands the owner on the My dogs tab by default", async () => {
+    mockGetSession.mockResolvedValue({ data: ownerSession() });
+
+    const { App } = await importApp();
+    render(<App />);
+
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    // The owner's default tab is My dogs (the existing owner dashboard test
+    // expects the dogs screen on first render); Discover must not be current.
+    expect(within(nav).getByRole("button", { name: "My dogs" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(nav).getByRole("button", { name: "Discover" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+  it("keeps the walker's route list on the Today tab", async () => {
+    mockGetSession.mockResolvedValue({ data: walkerSession() });
+    mockFetchRoutes.mockResolvedValue([
+      { id: "route-1", stops: [{ dogId: "dog-1", dogName: "Firulais" }] },
+    ]);
+
+    const { App } = await importApp();
+    render(<App />);
+
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    expect(within(nav).getByRole("button", { name: "Today" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(await screen.findByText(/route-1/i)).toBeInTheDocument();
+  });
+
+  it("keeps the owner's dogs screen on the My dogs tab", async () => {
+    mockGetSession.mockResolvedValue({ data: ownerSession() });
+
+    const { App } = await importApp();
+    const user = userEvent.setup();
+    render(<App />);
+
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    await user.click(within(nav).getByRole("button", { name: "My dogs" }));
+    expect(within(nav).getByRole("button", { name: "My dogs" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(await screen.findByRole("button", { name: /add dog/i })).toBeInTheDocument();
+  });
+
+  it("shows a Coming soon empty state for a walker tab with no feature yet", async () => {
+    mockGetSession.mockResolvedValue({ data: walkerSession() });
+    mockFetchRoutes.mockResolvedValue([]);
+
+    const { App } = await importApp();
+    const user = userEvent.setup();
+    render(<App />);
+
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    await user.click(within(nav).getByRole("button", { name: "Requests" }));
+    expect(within(nav).getByRole("button", { name: "Requests" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(await screen.findByRole("heading", { name: "Coming soon" })).toBeInTheDocument();
+  });
+
+  it("shows a Coming soon empty state for an owner tab with no feature yet", async () => {
+    mockGetSession.mockResolvedValue({ data: ownerSession() });
+
+    const { App } = await importApp();
+    const user = userEvent.setup();
+    render(<App />);
+
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    await user.click(within(nav).getByRole("button", { name: "Discover" }));
+    expect(await screen.findByRole("heading", { name: "Coming soon" })).toBeInTheDocument();
+  });
+
+  it("loads the design tokens stylesheet from the app entry", async () => {
+    const { readFileSync } = await import("node:fs");
+    // One of the entry modules must import the kit tokens so they actually
+    // load in the browser; PR 2 could otherwise create the file and never use it.
+    const entry = `${readFileSync("apps/web/src/main.tsx", "utf8")}\n${readFileSync(
+      "apps/web/src/App.tsx",
+      "utf8",
+    )}`;
+    expect(entry).toMatch(/import\s+["']\.\/ui\/tokens\.css["']/);
   });
 });
