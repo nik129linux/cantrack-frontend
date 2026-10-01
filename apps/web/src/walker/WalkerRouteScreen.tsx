@@ -13,6 +13,7 @@ import { Banner } from "../ui/Banner.js";
 import { Button } from "../ui/Button.js";
 import { Toast } from "../ui/Toast.js";
 import { ClockIcon } from "../ui/icons.js";
+import { formatWhen } from "../lib/format.js";
 
 /** The check-in outcome as the screen shows it, whichever way it was decided. */
 type CheckInView =
@@ -240,7 +241,9 @@ export function WalkerRouteScreen({
                 </span>
                 <div className="route-stop__copy">
                   <strong>{stop.dogName ?? stop.dogId}</strong>
-                  <time dateTime={stop.pickupTime}>{stop.pickupTime}</time>
+                  {stop.pickupTime ? (
+                    <time dateTime={stop.pickupTime}>{formatWhen(stop.pickupTime)}</time>
+                  ) : null}
                 </div>
               </div>
               <Button onClick={() => openCheckIn(stopIndex)}>Check in</Button>

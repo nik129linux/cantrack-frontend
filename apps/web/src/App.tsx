@@ -7,10 +7,13 @@ import {
 } from "./auth/AuthScreens.js";
 import { OwnerDiscoverScreen } from "./owner/OwnerDiscoverScreen.js";
 import { OwnerDogsScreen } from "./owner/OwnerDogsScreen.js";
+import { WalkerClientsScreen } from "./walker/WalkerClientsScreen.js";
 import { WalkerInboxScreen } from "./walker/WalkerInboxScreen.js";
+import { WalkerPlanPanel } from "./walker/WalkerPlanPanel.js";
 import { WalkerProfileScreen } from "./walker/WalkerProfileScreen.js";
 import { WalkerRouteScreen } from "./walker/WalkerRouteScreen.js";
 import { fetchRoutes, type Route } from "./lib/api.js";
+import { formatWhen } from "./lib/format.js";
 import { supabase } from "./lib/supabase.js";
 import { Banner } from "./ui/Banner.js";
 import { BottomNav } from "./ui/BottomNav.js";
@@ -146,15 +149,21 @@ function RouteList({ onOpen }: { onOpen: (route: Route) => void }) {
         <ol className="route-list" aria-label="Your routes">
           {routes.map((route, routeIndex) => {
             const firstDog = route.stops[0]?.dogName ?? route.stops[0]?.dogId;
+            const firstTime = route.stops[0]?.pickupTime;
             const stopLabel = `${route.stops.length} ${route.stops.length === 1 ? "stop" : "stops"}`;
+            // Polish item 3 (S2): the card is titled with the first dog and the
+            // formatted time — never the route UUID, never a raw ISO string.
+            const subtitle = [firstTime ? formatWhen(firstTime) : null, stopLabel]
+              .filter((part) => part !== null)
+              .join(" · ");
 
             return (
               <li key={route.id}>
                 <ListRow
                   data-tint={getRouteTint(routeIndex)}
                   icon={<ClockIcon />}
-                  title={route.id}
-                  subtitle={`${firstDog ?? "First dog pending"} · ${stopLabel}`}
+                  title={firstDog ?? "Route"}
+                  subtitle={subtitle}
                   onClick={() => onOpen(route)}
                 />
               </li>
@@ -184,7 +193,12 @@ function WalkerDashboard() {
     );
   }
 
-  return <RouteList onOpen={setSelectedRoute} />;
+  return (
+    <>
+      <WalkerPlanPanel />
+      <RouteList onOpen={setSelectedRoute} />
+    </>
+  );
 }
 
 /** Placeholder for the marketplace sections that later slices (S1-S5) build. */
@@ -206,7 +220,7 @@ function WalkerShell({ userId }: { userId: string }) {
         {tab === "Today" ? <WalkerDashboard /> : null}
         {tab === "Requests" ? <WalkerInboxScreen /> : null}
         {tab === "Profile" ? <WalkerProfileScreen userId={userId} /> : null}
-        {tab === "Clients" ? <ComingSoon section={tab} /> : null}
+        {tab === "Clients" ? <WalkerClientsScreen /> : null}
       </div>
       <BottomNav role="walker" active={tab} onNavigate={setTab} />
     </div>

@@ -373,3 +373,69 @@ export function cancelRequest(requestId: string): Promise<CancelRequestResult> {
     { method: "POST" },
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* S2: walker panel and pickup plan                                    */
+/* ------------------------------------------------------------------ */
+
+/** One accepted request as the walker's client (full questionnaire, pin). */
+export type WalkerClient = {
+  requestId: string;
+  dogId: string;
+  dogName: string | null;
+  requestedTime: string;
+  pickupLat: number;
+  pickupLng: number;
+  profile: DogProfile | null;
+};
+
+export type PlanStop = {
+  requestId: string;
+  dogId: string;
+  dogName: string | null;
+  requestedTime: string;
+  eta: string;
+  legDistanceKm: number;
+  flags: string[];
+  group: number;
+  lateMinutes: number;
+  late: boolean;
+};
+
+export type SuggestedPlan = {
+  date: string;
+  stops: PlanStop[];
+  totalDistanceKm: number;
+  feasible: boolean;
+};
+
+export type SuggestPlanInput = {
+  date: string;
+  utcOffsetMinutes: number;
+};
+
+export type RouteStopInput = {
+  dogId: string;
+  pickupTime: string;
+};
+
+/** The walker's clients: dogs with an accepted request addressed to them. */
+export function fetchClients(): Promise<WalkerClient[]> {
+  return request<WalkerClient[]>("/clients");
+}
+
+/** Suggest (never persist) the pickup plan for one local day. */
+export function suggestPlan(input: SuggestPlanInput): Promise<SuggestedPlan> {
+  return request<SuggestedPlan>("/plans/suggest", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Accept a plan by creating a route through the EXISTING endpoint. */
+export function createRoute(stops: RouteStopInput[]): Promise<Route> {
+  return request<Route>("/routes", {
+    method: "POST",
+    body: JSON.stringify({ stops }),
+  });
+}
