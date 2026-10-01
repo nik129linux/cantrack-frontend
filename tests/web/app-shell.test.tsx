@@ -43,6 +43,14 @@ vi.mock("../../apps/web/src/lib/api.js", () => ({
   fetchClients: vi.fn().mockResolvedValue([]),
   suggestPlan: vi.fn().mockResolvedValue({ date: "", stops: [], totalDistanceKm: 0 }),
   createRoute: vi.fn().mockResolvedValue({ id: "route-9", stops: [] }),
+  fetchRequestCheckout: vi.fn().mockResolvedValue(null),
+  createCheckout: vi.fn().mockResolvedValue(null),
+  updateCheckoutNote: vi.fn().mockResolvedValue(null),
+  sendCheckout: vi.fn().mockResolvedValue(null),
+  rerunAiNote: vi.fn().mockResolvedValue(null),
+  fetchAiQuota: vi.fn().mockResolvedValue({ used: 0, limit: 60, resetsAt: "" }),
+  fetchCheckouts: vi.fn().mockResolvedValue([]),
+  fetchTimeline: vi.fn().mockResolvedValue([]),
 }));
 
 async function importApp() {
@@ -256,11 +264,28 @@ describe("App shell — S0 role-based bottom navigation", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // S1 builds the Discover tab (browse walkers + send requests); Activity
-    // (timeline + checkouts, S2/S3) stays a Coming soon empty state.
+    // S3 builds the Activity tab (timeline + checkouts); Profile is the last
+    // owner tab still Coming soon (S4: ratings, discover extras).
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    await user.click(within(nav).getByRole("button", { name: "Profile" }));
+    expect(await screen.findByRole("heading", { name: "Coming soon" })).toBeInTheDocument();
+  });
+
+  it("shows the activity screen on the owner's Activity tab (S3)", async () => {
+    mockGetSession.mockResolvedValue({ data: ownerSession() });
+
+    const { App } = await importApp();
+    const user = userEvent.setup();
+    render(<App />);
+
     const nav = await screen.findByRole("navigation", { name: "Main" });
     await user.click(within(nav).getByRole("button", { name: "Activity" }));
-    expect(await screen.findByRole("heading", { name: "Coming soon" })).toBeInTheDocument();
+    expect(within(nav).getByRole("button", { name: "Activity" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(await screen.findByRole("heading", { name: "Activity" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Coming soon" })).not.toBeInTheDocument();
   });
 
   it("shows the walker inbox on the Requests tab (S1)", async () => {
