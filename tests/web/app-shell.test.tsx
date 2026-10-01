@@ -224,9 +224,11 @@ describe("App shell — S0 role-based bottom navigation", () => {
     const user = userEvent.setup();
     render(<App />);
 
+    // S1 builds the Requests tab (inbox) and the Profile tab (walker profile);
+    // Clients (S2: my clients + plans) stays a Coming soon empty state.
     const nav = await screen.findByRole("navigation", { name: "Main" });
-    await user.click(within(nav).getByRole("button", { name: "Requests" }));
-    expect(within(nav).getByRole("button", { name: "Requests" })).toHaveAttribute(
+    await user.click(within(nav).getByRole("button", { name: "Clients" }));
+    expect(within(nav).getByRole("button", { name: "Clients" })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -240,9 +242,55 @@ describe("App shell — S0 role-based bottom navigation", () => {
     const user = userEvent.setup();
     render(<App />);
 
+    // S1 builds the Discover tab (browse walkers + send requests); Activity
+    // (timeline + checkouts, S2/S3) stays a Coming soon empty state.
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    await user.click(within(nav).getByRole("button", { name: "Activity" }));
+    expect(await screen.findByRole("heading", { name: "Coming soon" })).toBeInTheDocument();
+  });
+
+  it("shows the walker inbox on the Requests tab (S1)", async () => {
+    mockGetSession.mockResolvedValue({ data: walkerSession() });
+    mockFetchRoutes.mockResolvedValue([]);
+
+    const { App } = await importApp();
+    const user = userEvent.setup();
+    render(<App />);
+
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    await user.click(within(nav).getByRole("button", { name: "Requests" }));
+    expect(within(nav).getByRole("button", { name: "Requests" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(await screen.findByRole("heading", { name: "Requests" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Coming soon" })).not.toBeInTheDocument();
+  });
+
+  it("shows the walker profile form on the Profile tab (S1)", async () => {
+    mockGetSession.mockResolvedValue({ data: walkerSession() });
+    mockFetchRoutes.mockResolvedValue([]);
+
+    const { App } = await importApp();
+    const user = userEvent.setup();
+    render(<App />);
+
+    const nav = await screen.findByRole("navigation", { name: "Main" });
+    await user.click(within(nav).getByRole("button", { name: "Profile" }));
+    expect(await screen.findByLabelText("Display name")).toBeInTheDocument();
+  });
+
+  it("shows walker discovery on the owner's Discover tab (S1)", async () => {
+    mockGetSession.mockResolvedValue({ data: ownerSession() });
+
+    const { App } = await importApp();
+    const user = userEvent.setup();
+    render(<App />);
+
     const nav = await screen.findByRole("navigation", { name: "Main" });
     await user.click(within(nav).getByRole("button", { name: "Discover" }));
-    expect(await screen.findByRole("heading", { name: "Coming soon" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Find a walker" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "My requests" })).toBeInTheDocument();
   });
 
   it("loads the design tokens stylesheet from the app entry", async () => {
