@@ -40,6 +40,9 @@ vi.mock("../../apps/web/src/lib/api.js", () => ({
   fetchWalkerProfile: vi.fn().mockResolvedValue(null),
   fetchRequests: vi.fn().mockResolvedValue([]),
   fetchRequest: vi.fn().mockResolvedValue(null),
+  fetchClients: vi.fn().mockResolvedValue([]),
+  suggestPlan: vi.fn().mockResolvedValue({ date: "", stops: [], totalDistanceKm: 0 }),
+  createRoute: vi.fn().mockResolvedValue({ id: "route-9", stops: [] }),
 }));
 
 async function importApp() {
@@ -102,8 +105,10 @@ describe("App shell", () => {
     const { App } = await importApp();
     render(<App />);
 
-    expect(await screen.findByText(/route-1/i)).toBeInTheDocument();
-    expect(screen.getByText(/route-2/i)).toBeInTheDocument();
+    // S2 polish item 3: route cards are titled with the first dog (plus the
+    // formatted time when the stop carries one), never the route UUID.
+    expect(await screen.findByText("Firulais")).toBeInTheDocument();
+    expect(screen.getByText("Rex")).toBeInTheDocument();
   });
 
   it("opens a walker route from the list", async () => {
@@ -116,7 +121,7 @@ describe("App shell", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const routeLink = await screen.findByText(/route-1/i);
+    const routeLink = await screen.findByText("Firulais");
     await user.click(routeLink);
 
     await waitFor(() => expect(screen.getByText("Firulais")).toBeInTheDocument());
@@ -205,7 +210,7 @@ describe("App shell — S0 role-based bottom navigation", () => {
       "aria-current",
       "page",
     );
-    expect(await screen.findByText(/route-1/i)).toBeInTheDocument();
+    expect(await screen.findByText("Firulais")).toBeInTheDocument();
   });
 
   it("keeps the owner's dogs screen on the My dogs tab", async () => {
@@ -224,7 +229,7 @@ describe("App shell — S0 role-based bottom navigation", () => {
     expect(await screen.findByRole("button", { name: /add dog/i })).toBeInTheDocument();
   });
 
-  it("shows a Coming soon empty state for a walker tab with no feature yet", async () => {
+  it("shows the clients screen on the Clients tab (S2)", async () => {
     mockGetSession.mockResolvedValue({ data: walkerSession() });
     mockFetchRoutes.mockResolvedValue([]);
 
@@ -232,15 +237,16 @@ describe("App shell — S0 role-based bottom navigation", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // S1 builds the Requests tab (inbox) and the Profile tab (walker profile);
-    // Clients (S2: my clients + plans) stays a Coming soon empty state.
+    // S2 builds the Clients tab, so the walker has no Coming soon tabs left;
+    // the owner's Activity it below keeps covering the Coming soon pattern.
     const nav = await screen.findByRole("navigation", { name: "Main" });
     await user.click(within(nav).getByRole("button", { name: "Clients" }));
     expect(within(nav).getByRole("button", { name: "Clients" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(await screen.findByRole("heading", { name: "Coming soon" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "My clients" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Coming soon" })).not.toBeInTheDocument();
   });
 
   it("shows a Coming soon empty state for an owner tab with no feature yet", async () => {
@@ -299,6 +305,44 @@ describe("App shell — S0 role-based bottom navigation", () => {
     await user.click(within(nav).getByRole("button", { name: "Discover" }));
     expect(await screen.findByRole("heading", { name: "Find a walker" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "My requests" })).toBeInTheDocument();
+  });
+
+  it("shows the pickup-plan panel on the walker's Today tab (S2)", async () => {
+    mockGetSession.mockResolvedValue({ data: walkerSession() });
+    mockFetchRoutes.mockResolvedValue([]);
+
+    const { App } = await importApp();
+    render(<App />);
+
+    expect(
+      await screen.findByRole("button", { name: "Suggest order" }),
+    ).toBeInTheDocument();
+  });
+
+  it("titles route cards with the first dog and the formatted time, not the UUID (S2)", async () => {
+    mockGetSession.mockResolvedValue({ data: walkerSession() });
+    mockFetchRoutes.mockResolvedValue([
+      {
+        id: "route-1",
+        stops: [
+          { dogId: "dog-1", dogName: "Firulais", pickupTime: "2026-10-05T10:00:00.000Z" },
+          { dogId: "dog-2", dogName: "Rex", pickupTime: "2026-10-05T11:00:00.000Z" },
+        ],
+      },
+    ]);
+
+    const { App } = await importApp();
+    render(<App />);
+
+    const formatted = new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date("2026-10-05T10:00:00.000Z"));
+
+    expect(await screen.findByText("Firulais")).toBeInTheDocument();
+    expect(screen.getByText(`${formatted} · 2 stops`)).toBeInTheDocument();
+    expect(screen.queryByText(/route-1/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/2026-10-05T/)).not.toBeInTheDocument();
   });
 
   it("loads the design tokens stylesheet from the app entry", async () => {

@@ -177,4 +177,31 @@ describe("Walker route screen (FR-06, FR-07, FR-10, FR-11)", () => {
 
     expect(await screen.findByText(/no check-in found/i)).toBeInTheDocument();
   });
+
+  // ADDITIVE (S2, polish item 3): no raw ISO strings in the walker screens —
+  // stop times render through formatWhen (Intl.DateTimeFormat) while the
+  // machine-readable value stays in the <time dateTime> attribute.
+  it("formats stop times with the locale formatter and keeps the raw ISO only in dateTime", async () => {
+    const { WalkerRouteScreen } = await importScreen();
+    const { container } = render(<WalkerRouteScreen routeId="route-1" />);
+
+    await screen.findByText("Firulais");
+
+    const formatted = (iso: string) =>
+      new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(iso));
+
+    expect(screen.getByText(formatted("2026-10-01T08:00:00.000Z"))).toBeInTheDocument();
+    expect(screen.getByText(formatted("2026-10-01T08:15:00.000Z"))).toBeInTheDocument();
+    expect(screen.queryByText("2026-10-01T08:00:00.000Z")).not.toBeInTheDocument();
+    expect(screen.queryByText(/2026-10-01T/)).not.toBeInTheDocument();
+
+    const times = Array.from(container.querySelectorAll("time"));
+    expect(times.map((time) => time.getAttribute("dateTime"))).toEqual([
+      "2026-10-01T08:00:00.000Z",
+      "2026-10-01T08:15:00.000Z",
+    ]);
+  });
 });
