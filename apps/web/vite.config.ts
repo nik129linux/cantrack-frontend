@@ -11,7 +11,7 @@ export default defineConfig({
         name: "CanTrack",
         short_name: "CanTrack",
         description: "Operations software for neighbourhood dog walkers.",
-        theme_color: "#20b957",
+        theme_color: "#45C55D",
         background_color: "#20b957",
         display: "standalone",
         icons: [],
