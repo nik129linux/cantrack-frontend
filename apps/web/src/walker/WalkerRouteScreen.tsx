@@ -9,25 +9,20 @@ import {
   type CheckInResult,
   type Route,
 } from "../lib/api.js";
+import { Banner } from "../ui/Banner.js";
+import { Button } from "../ui/Button.js";
+import { Toast } from "../ui/Toast.js";
+import { ClockIcon } from "../ui/icons.js";
 
 /** The check-in outcome as the screen shows it, whichever way it was decided. */
 type CheckInView =
   | { kind: "confirmed"; dogId: string; dogName: string | null; note: string | null }
   | { kind: "candidates"; candidates: CheckInCandidate[]; note: string | null };
 
-const routeToneNames = ["mint", "coral", "yellow", "sky", "green"] as const;
+const stopTintNames = ["mint", "peach", "butter", "sky", "sage"] as const;
 
-function getRouteStopToneClass(index: number): string {
-  return `route-stop--${routeToneNames[index % routeToneNames.length] ?? "mint"}`;
-}
-
-function RouteStopIcon() {
-  return (
-    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-      <circle cx="32" cy="32" r="22" fill="none" stroke="currentColor" strokeWidth="5" />
-      <path d="M32 19v14l10 7" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="5" />
-    </svg>
-  );
+function getStopTint(index: number): string {
+  return stopTintNames[index % stopTintNames.length] ?? "mint";
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -210,54 +205,45 @@ export function WalkerRouteScreen({
     return route?.stops.find((stop) => stop.dogId === dogId)?.dogName ?? null;
   }
 
+  const confirmedName =
+    checkInResult?.kind === "confirmed"
+      ? checkInResult.dogName ?? stopDogName(checkInResult.dogId) ?? checkInResult.dogId
+      : null;
+
   return (
     <main ref={screenRef} className="walker-screen" data-cantrack-walker-route-screen>
-      <header className="walker-screen__header">
-        <h1>Walker route</h1>
-        <span className="walker-screen__illustration" aria-hidden="true">
-          <RouteStopIcon />
-        </span>
-      </header>
-      <div className="walker-screen__tools">
-        <button
-          className="form-button form-button--secondary"
-          type="button"
-          onClick={() => void handleUndo()}
-          disabled={isUndoing}
-        >
-          Undo
-        </button>
-      </div>
-      {undoMessage !== null ? <p role="status">{undoMessage}</p> : null}
-      {undoError !== null ? <p role="alert">{undoError}</p> : null}
+      <Banner title="Walker route" subtitle="Stops in order, check in at each one." tint="sky" />
 
-      {isLoading ? <p>Loading route...</p> : null}
-      {routeError !== null ? <p role="alert">{routeError}</p> : null}
+      <div className="walker-screen__tools">
+        <Button variant="secondary" onClick={() => void handleUndo()} disabled={isUndoing}>
+          Undo
+        </Button>
+      </div>
+      {undoMessage !== null ? <Toast tone="success" message={undoMessage} /> : null}
+      {undoError !== null ? <Toast tone="error" message={undoError} /> : null}
+
+      {isLoading ? <p className="app-shell__status">Loading route...</p> : null}
+      {routeError !== null ? <p className="app-shell__alert" role="alert">{routeError}</p> : null}
 
       {route !== null ? (
-        <ol aria-label="Route stops">
+        <ol className="walker-screen__stops" aria-label="Route stops">
           {route.stops.map((stop, stopIndex) => (
             <li
-              className={`route-stop ${getRouteStopToneClass(stopIndex)}`}
+              className="route-stop"
               data-testid="route-stop"
+              data-tint={getStopTint(stopIndex)}
               key={`${stop.dogId}-${stopIndex}`}
             >
               <div className="route-stop__row">
                 <span className="route-stop__icon" aria-hidden="true">
-                  <RouteStopIcon />
+                  <ClockIcon />
                 </span>
                 <div className="route-stop__copy">
                   <strong>{stop.dogName ?? stop.dogId}</strong>
                   <time dateTime={stop.pickupTime}>{stop.pickupTime}</time>
                 </div>
               </div>
-              <button
-                className="form-button form-button--primary"
-                type="button"
-                onClick={() => openCheckIn(stopIndex)}
-              >
-                Check in
-              </button>
+              <Button onClick={() => openCheckIn(stopIndex)}>Check in</Button>
 
               {selectedStopIndex === stopIndex ? (
                 <div className="form-field">
@@ -278,12 +264,10 @@ export function WalkerRouteScreen({
         </ol>
       ) : null}
 
-      {checkInResult?.kind === "confirmed" ? (
+      {checkInResult?.kind === "confirmed" && confirmedName !== null ? (
         <>
-          <p role="status">
-            Checked in {checkInResult.dogName ?? stopDogName(checkInResult.dogId) ?? checkInResult.dogId}.
-          </p>
-          {checkInResult.note !== null ? <p>{checkInResult.note}</p> : null}
+          <Toast tone="success" message={`Checked in ${confirmedName}.`} />
+          {checkInResult.note !== null ? <p className="ai-note">{checkInResult.note}</p> : null}
         </>
       ) : null}
 
@@ -304,21 +288,19 @@ export function WalkerRouteScreen({
                 {candidate.dogName ?? stopDogName(candidate.dogId) ?? candidate.dogId} ({Math.round(candidate.similarity * 100)}% match)
               </label>
             ))}
-            <button
-              className="form-button form-button--primary"
-              type="button"
+            <Button
               onClick={() => void handleConfirmCandidate()}
               disabled={selectedCandidateId === null || isConfirming}
             >
               Confirm
-            </button>
+            </Button>
           </fieldset>
-          {confirmError !== null ? <p role="alert">{confirmError}</p> : null}
-          {checkInResult.note !== null ? <p>{checkInResult.note}</p> : null}
+          {confirmError !== null ? <Toast tone="error" message={confirmError} /> : null}
+          {checkInResult.note !== null ? <p className="ai-note">{checkInResult.note}</p> : null}
         </>
       ) : null}
 
-      {checkInError !== null ? <p role="alert">{checkInError}</p> : null}
+      {checkInError !== null ? <Toast tone="error" message={checkInError} /> : null}
     </main>
   );
 }

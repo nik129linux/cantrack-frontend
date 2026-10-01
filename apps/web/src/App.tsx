@@ -9,14 +9,22 @@ import { OwnerDogsScreen } from "./owner/OwnerDogsScreen.js";
 import { WalkerRouteScreen } from "./walker/WalkerRouteScreen.js";
 import { fetchRoutes, type Route } from "./lib/api.js";
 import { supabase } from "./lib/supabase.js";
+import { Banner } from "./ui/Banner.js";
+import { BottomNav } from "./ui/BottomNav.js";
+import { Button } from "./ui/Button.js";
+import { EmptyState } from "./ui/EmptyState.js";
+import { ListRow } from "./ui/ListRow.js";
+import { Pill } from "./ui/Pill.js";
+import { ClockIcon } from "./ui/icons.js";
+import "./ui/tokens.css";
 import "./app-shell.css";
 
 type AuthView = "signup" | "login" | "reset";
 
-const routeToneNames = ["mint", "coral", "yellow", "sky", "green"] as const;
+const routeTintNames = ["mint", "peach", "butter", "sky", "sage"] as const;
 
-function getRouteToneClass(index: number): string {
-  return `route-card--${routeToneNames[index % routeToneNames.length] ?? "mint"}`;
+function getRouteTint(index: number): string {
+  return routeTintNames[index % routeTintNames.length] ?? "mint";
 }
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -67,27 +75,15 @@ function AuthShell() {
         </div>
       </header>
       <nav className="auth-switcher" aria-label="Account access">
-        <button
-          type="button"
-          aria-pressed={view === "signup"}
-          onClick={() => setView("signup")}
-        >
+        <Pill active={view === "signup"} onClick={() => setView("signup")}>
           Sign up
-        </button>
-        <button
-          type="button"
-          aria-pressed={view === "login"}
-          onClick={() => setView("login")}
-        >
+        </Pill>
+        <Pill active={view === "login"} onClick={() => setView("login")}>
           Log in
-        </button>
-        <button
-          type="button"
-          aria-pressed={view === "reset"}
-          onClick={() => setView("reset")}
-        >
+        </Pill>
+        <Pill active={view === "reset"} onClick={() => setView("reset")}>
           Reset
-        </button>
+        </Pill>
       </nav>
       {view === "signup" ? <SignupScreen /> : null}
       {view === "login" ? <LoginScreen /> : null}
@@ -127,25 +123,20 @@ function RouteList({ onOpen }: { onOpen: (route: Route) => void }) {
   }, []);
 
   return (
-    <div className="route-dashboard route-dashboard--sky">
-      <header className="route-dashboard__header">
-        <div>
-          <p className="app-shell__eyebrow">Today’s schedule</p>
-          <h1>Your routes</h1>
-        </div>
-        <span className="route-dashboard__count" aria-label={`${routes.length} routes`}>
-          {routes.length}
-        </span>
-      </header>
+    <div className="route-dashboard">
+      <Banner
+        title="Your routes"
+        subtitle={`Today’s schedule · ${routes.length} ${routes.length === 1 ? "route" : "routes"}`}
+        tint="sky"
+      />
 
       {isLoading ? <p className="app-shell__status">Loading routes...</p> : null}
       {error !== null ? <p className="app-shell__alert" role="alert">{error}</p> : null}
       {!isLoading && error === null && routes.length === 0 ? (
-        <div className="route-empty">
-          <span className="route-empty__badge" aria-hidden="true">0</span>
-          <h2>No routes scheduled</h2>
-          <p>Your next walk will appear here when it is ready.</p>
-        </div>
+        <EmptyState
+          title="No routes scheduled"
+          message="Your next walk will appear here when it is ready."
+        />
       ) : null}
 
       {routes.length > 0 ? (
@@ -156,21 +147,13 @@ function RouteList({ onOpen }: { onOpen: (route: Route) => void }) {
 
             return (
               <li key={route.id}>
-                <button
-                  className={`route-card ${getRouteToneClass(routeIndex)}`}
-                  type="button"
+                <ListRow
+                  data-tint={getRouteTint(routeIndex)}
+                  icon={<ClockIcon />}
+                  title={route.id}
+                  subtitle={`${firstDog ?? "First dog pending"} · ${stopLabel}`}
                   onClick={() => onOpen(route)}
-                >
-                  <span className="route-card__order" aria-hidden="true">
-                    {String(routeIndex + 1).padStart(2, "0")}
-                  </span>
-                  <span className="route-card__content">
-                    <strong>{route.id}</strong>
-                    <span>{firstDog ?? "First dog pending"}</span>
-                    <small>{stopLabel}</small>
-                  </span>
-                  <span className="route-card__arrow" aria-hidden="true">→</span>
-                </button>
+                />
               </li>
             );
           })}
@@ -185,22 +168,54 @@ function WalkerDashboard() {
 
   if (selectedRoute !== null) {
     return (
-      <div className="app-shell__panel route-detail route-detail--sky">
-        <button
+      <div className="route-detail">
+        <Button
           className="route-detail__back"
-          type="button"
+          variant="ghost"
           onClick={() => setSelectedRoute(null)}
         >
           <span aria-hidden="true">←</span> All routes
-        </button>
+        </Button>
         <WalkerRouteScreen routeId={selectedRoute.id} initialRoute={selectedRoute} />
       </div>
     );
   }
 
+  return <RouteList onOpen={setSelectedRoute} />;
+}
+
+/** Placeholder for the marketplace sections that later slices (S1-S5) build. */
+function ComingSoon({ section }: { section: string }) {
   return (
-    <div className="app-shell__panel app-shell__panel--routes">
-      <RouteList onOpen={setSelectedRoute} />
+    <EmptyState
+      title="Coming soon"
+      message={`The ${section} section lands in a later slice of the marketplace build.`}
+    />
+  );
+}
+
+function WalkerShell() {
+  const [tab, setTab] = useState("Today");
+
+  return (
+    <div className="app-shell__content">
+      <div className="app-shell__panel app-shell__panel--routes">
+        {tab === "Today" ? <WalkerDashboard /> : <ComingSoon section={tab} />}
+      </div>
+      <BottomNav role="walker" active={tab} onNavigate={setTab} />
+    </div>
+  );
+}
+
+function OwnerShell() {
+  const [tab, setTab] = useState("My dogs");
+
+  return (
+    <div className="app-shell__content">
+      <div className="app-shell__panel app-shell__panel--owner">
+        {tab === "My dogs" ? <OwnerDogsScreen /> : <ComingSoon section={tab} />}
+      </div>
+      <BottomNav role="owner" active={tab} onNavigate={setTab} />
     </div>
   );
 }
@@ -258,22 +273,21 @@ export function App() {
   return (
     <div ref={shellRef} className="app-shell" data-cantrack-app-shell>
       {session !== null ? (
-        <button
-          className="app-shell__logout"
-          type="button"
-          onClick={() => void supabase.auth.signOut()}
-        >
-          Log out
-        </button>
+        <div className="app-shell__topbar">
+          <span className="app-shell__eyebrow">CanTrack</span>
+          <Button
+            className="app-shell__logout"
+            variant="ghost"
+            onClick={() => void supabase.auth.signOut()}
+          >
+            Log out
+          </Button>
+        </div>
       ) : null}
       {authError !== null ? <p className="app-shell__alert" role="alert">{authError}</p> : null}
       {session === null ? <AuthShell /> : null}
-      {role === "owner" ? (
-        <div className="app-shell__panel app-shell__panel--owner">
-          <OwnerDogsScreen />
-        </div>
-      ) : null}
-      {role === "walker" ? <WalkerDashboard /> : null}
+      {role === "owner" ? <OwnerShell /> : null}
+      {role === "walker" ? <WalkerShell /> : null}
       {session !== null && role !== "owner" && role !== "walker" ? (
         <div className="app-shell__panel app-shell__status" role="alert">
           This account does not have a walker or owner role.

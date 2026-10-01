@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { supabase } from "../lib/supabase.js";
+import { Button } from "../ui/Button.js";
 
 type UserRole = "walker" | "owner";
 
@@ -141,13 +142,9 @@ export function SignupScreen() {
             onChange={() => setRole("owner")}
           />
         </fieldset>
-        <button
-          className="form-button form-button--primary form-button--block"
-          type="submit"
-          disabled={isSubmitting}
-        >
+        <Button type="submit" disabled={isSubmitting}>
           Sign up
-        </button>
+        </Button>
       </form>
       {error !== null && <p role="alert">{error}</p>}
     </main>
@@ -218,13 +215,9 @@ export function LoginScreen() {
             onChange={(event) => setPassword(event.target.value)}
           />
         </div>
-        <button
-          className="form-button form-button--primary form-button--block"
-          type="submit"
-          disabled={isSubmitting}
-        >
+        <Button type="submit" disabled={isSubmitting}>
           Log in
-        </button>
+        </Button>
       </form>
       {error !== null && <p role="alert">{error}</p>}
     </main>
@@ -284,13 +277,9 @@ export function ResetPasswordScreen() {
               onChange={(event) => setEmail(event.target.value)}
             />
           </div>
-          <button
-            className="form-button form-button--primary form-button--block"
-            type="submit"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" disabled={isSubmitting}>
             Reset password
-          </button>
+          </Button>
         </form>
       )}
       {error !== null && <p role="alert">{error}</p>}

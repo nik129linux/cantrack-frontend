@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { createDog, enrollPhotos, fetchDogs } from "../lib/api.js";
+import { Banner } from "../ui/Banner.js";
+import { Button } from "../ui/Button.js";
+import { EmptyState } from "../ui/EmptyState.js";
+import { ListRow } from "../ui/ListRow.js";
+import { PetTile, petTintFor } from "../ui/PetTile.js";
+import { Toast } from "../ui/Toast.js";
+import { PawIcon } from "../ui/icons.js";
 
 type Dog = {
   id: string;
@@ -12,26 +19,6 @@ type NewDog = {
   name: string;
   breed?: string;
 };
-
-const dogToneNames = ["mint", "coral", "yellow", "sky", "green"] as const;
-
-function getDogToneClass(index: number): string {
-  return `dog-list__item--${dogToneNames[index % dogToneNames.length] ?? "mint"}`;
-}
-
-function DogPawIcon() {
-  return (
-    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-      <ellipse cx="19" cy="23" rx="7" ry="9" fill="currentColor" />
-      <ellipse cx="32" cy="17" rx="7" ry="9" fill="currentColor" />
-      <ellipse cx="45" cy="23" rx="7" ry="9" fill="currentColor" />
-      <path
-        d="M32 28c-9 0-17 8-17 16 0 6 5 10 11 10 3 0 4-2 6-2s3 2 6 2c6 0 11-4 11-10 0-8-8-16-17-16Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "message" in error) {
@@ -188,42 +175,33 @@ export function OwnerDogsScreen() {
 
   return (
     <main ref={screenRef} className="owner-screen" data-cantrack-owner-dogs-screen>
-      <h1>My dogs</h1>
+      <Banner title="My dogs" subtitle="Your pack, reference photos and walks." tint="sage" />
 
       <section className="owner-screen__section--list" aria-labelledby="dog-list-heading">
-        <h2 id="dog-list-heading">Dogs</h2>
-        {isLoadingDogs ? <p>Loading dogs...</p> : null}
-        {dogsError !== null ? <p role="alert">{dogsError}</p> : null}
+        <h2 className="section-title" id="dog-list-heading">Dogs</h2>
+        {isLoadingDogs ? <p className="app-shell__status">Loading dogs...</p> : null}
+        {dogsError !== null ? <p className="app-shell__alert" role="alert">{dogsError}</p> : null}
         {!isLoadingDogs && dogs.length === 0 ? (
-          <div className="owner-empty">
-            <span className="owner-empty__illustration" aria-hidden="true">
-              <DogPawIcon />
-            </span>
-            <p>No dogs yet.</p>
-          </div>
+          <EmptyState
+            title="No dogs yet."
+            message="Add your first dog below, then enroll its 3 reference photos."
+          />
         ) : null}
         {dogs.length > 0 ? (
           <ul className="dog-list">
-            {dogs.map((dog, dogIndex) => (
-              <li className={`dog-list__item ${getDogToneClass(dogIndex)}`} key={dog.id}>
-                <div className="dog-list__identity">
-                  <span className="dog-list__icon" aria-hidden="true">
-                    <DogPawIcon />
-                  </span>
-                  <div className="dog-list__copy">
-                    <strong>{dog.name}</strong>
-                    {dog.breed !== null && dog.breed !== undefined ? (
-                      <span className="dog-list__meta">{dog.breed}</span>
-                    ) : null}
-                  </div>
-                </div>
-                <button
-                  className="form-button form-button--secondary"
-                  type="button"
-                  onClick={() => openEnrollment(dog.id)}
-                >
-                  Enroll photos
-                </button>
+            {dogs.map((dog) => (
+              <li className="dog-list__item" key={dog.id}>
+                <ListRow
+                  data-tint={petTintFor(dog.id)}
+                  icon={<PawIcon />}
+                  title={dog.name}
+                  subtitle={dog.breed ?? undefined}
+                  trailing={
+                    <Button variant="secondary" onClick={() => openEnrollment(dog.id)}>
+                      Enroll photos
+                    </Button>
+                  }
+                />
               </li>
             ))}
           </ul>
@@ -231,7 +209,7 @@ export function OwnerDogsScreen() {
       </section>
 
       <section className="owner-screen__section--form" aria-labelledby="add-dog-heading">
-        <h2 id="add-dog-heading">Add a dog</h2>
+        <h2 className="section-title" id="add-dog-heading">Add a dog</h2>
         <form onSubmit={handleCreateDog} noValidate>
           <div className="form-field">
             <label className="form-label" htmlFor="dog-name">Name</label>
@@ -255,20 +233,21 @@ export function OwnerDogsScreen() {
               onChange={(event) => setBreed(event.target.value)}
             />
           </div>
-          <button
-            className="form-button form-button--primary form-button--block"
-            type="submit"
-            disabled={isCreating}
-          >
+          <Button type="submit" disabled={isCreating}>
             Add dog
-          </button>
+          </Button>
         </form>
-        {createError !== null ? <p role="alert">{createError}</p> : null}
+        {createError !== null ? <p className="app-shell__alert" role="alert">{createError}</p> : null}
       </section>
 
       {selectedDog !== undefined ? (
         <section className="owner-screen__section--enrollment" aria-labelledby="enrollment-heading">
-          <h2 id="enrollment-heading">Enroll photos for {selectedDog.name}</h2>
+          <h2 className="section-title" id="enrollment-heading">
+            Enroll photos for {selectedDog.name}
+          </h2>
+          <div className="owner-screen__enrollment-tile">
+            <PetTile dogId={selectedDog.id} name={selectedDog.name} />
+          </div>
           <form onSubmit={handleEnrollment} noValidate>
             <div className="form-field">
               <label className="form-label" htmlFor="reference-photos">Reference photos (exactly 3)</label>
@@ -282,23 +261,17 @@ export function OwnerDogsScreen() {
                 onChange={handlePhotosChange}
               />
             </div>
-            <button
-              className="form-button form-button--primary form-button--block"
-              type="submit"
-              disabled={isEnrolling}
-            >
-              Save enrollment
-            </button>
-            <button
-              className="form-button form-button--secondary form-button--block"
-              type="button"
-              onClick={() => setSelectedDogId(null)}
-            >
-              Cancel enrollment
-            </button>
+            <div className="owner-screen__enrollment-actions">
+              <Button type="submit" disabled={isEnrolling}>
+                Save enrollment
+              </Button>
+              <Button variant="secondary" onClick={() => setSelectedDogId(null)}>
+                Cancel enrollment
+              </Button>
+            </div>
           </form>
-          {enrollmentError !== null ? <p role="alert">{enrollmentError}</p> : null}
-          {enrollmentSuccess !== null ? <p role="status">{enrollmentSuccess}</p> : null}
+          {enrollmentError !== null ? <Toast tone="error" message={enrollmentError} /> : null}
+          {enrollmentSuccess !== null ? <Toast tone="success" message={enrollmentSuccess} /> : null}
         </section>
       ) : null}
     </main>
