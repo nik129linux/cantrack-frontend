@@ -144,7 +144,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   });
 
   if (!response.ok) {
-    throw await toRequestError(response);
+    const error = await toRequestError(response);
+    // Callers that need the status (e.g. fetchRequestCheckout mapping the
+    // "no checkout yet" 404 to null) read it from the Error; the message —
+    // what every existing caller asserts — is untouched.
+    (error as Error & { status?: number }).status = response.status;
+    throw error;
   }
 
   return response.json() as Promise<T>;
@@ -438,4 +443,166 @@ export function createRoute(stops: RouteStopInput[]): Promise<Route> {
     method: "POST",
     body: JSON.stringify({ stops }),
   });
+}
+
+// ---------------------------------------------------------------------------
+// S3 — Checkout: photos from the walker to the owner, behind a human gate.
+// ---------------------------------------------------------------------------
+
+/** One stored photo, served ONLY as a signed URL expiring in 3600 s. */
+export type CheckoutPhoto = {
+  url: string;
+  expiresIn: number;
+};
+
+/** The last AI attempt: answered, model down, or skipped at the quota. */
+export type AiStatus = "ok" | "unavailable" | "quota";
+
+/**
+ * The checkout as its WALKER sees it. `aiNote`/`dogVisible` are the model's
+ * read-only provenance; `note` is the walker's own text (the only field the
+ * walker edits, and the only text the owner ever sees).
+ */
+export type WalkerCheckout = {
+  id: string;
+  requestId: string;
+  dogId: string;
+  dogName: string | null;
+  walkerId: string;
+  status: "draft" | "sent";
+  photos: CheckoutPhoto[];
+  aiNote: string | null;
+  dogVisible: boolean | null;
+  note: string | null;
+  aiStatus: AiStatus;
+  sentAt: string | null;
+  createdAt: string;
+};
+
+/** The checkout as its OWNER sees it: no AI fields, ever. */
+export type OwnerCheckout = {
+  id: string;
+  requestId: string;
+  dogId: string;
+  dogName: string | null;
+  walkerId: string;
+  walkerName: string | null;
+  note: string | null;
+  photos: CheckoutPhoto[];
+  sentAt: string;
+};
+
+export type TimelineWalkItem = {
+  type: "walk";
+  requestId: string;
+  walkerId: string;
+  walkerName: string | null;
+  requestedTime: string;
+  status: string;
+};
+
+export type TimelineCheckoutItem = {
+  type: "checkout";
+  checkoutId: string;
+  requestId: string;
+  walkerId: string;
+  walkerName: string | null;
+  note: string | null;
+  sentAt: string;
+};
+
+export type TimelineItem = TimelineWalkItem | TimelineCheckoutItem;
+
+export type TimelineOrder = "asc" | "desc";
+
+export type SendCheckoutResult = {
+  id: string;
+  requestId: string;
+  status: "sent";
+  sentAt: string;
+};
+
+export type AiQuota = {
+  used: number;
+  limit: number;
+  resetsAt: string;
+};
+
+/** Upload 1..3 checkout photos (multipart field `image` each, sent untouched —
+ * the API validates the magic bytes and stores them in the private bucket). */
+export function createCheckout(requestId: string, photos: File[]): Promise<WalkerCheckout> {
+  const body = new FormData();
+  for (const photo of photos) {
+    body.append("image", photo);
+  }
+
+  return request<WalkerCheckout>(
+    `/requests/${encodeURIComponent(requestId)}/checkout`,
+    { method: "POST", body },
+  );
+}
+
+/** The request's checkout for the walker, or `null` when there is none yet
+ * (the API's 404 is the "no checkout" answer, not an error to surface). */
+export async function fetchRequestCheckout(
+  requestId: string,
+): Promise<WalkerCheckout | null> {
+  try {
+    return await request<WalkerCheckout>(
+      `/requests/${encodeURIComponent(requestId)}/checkout`,
+    );
+  } catch (error: unknown) {
+    if ((error as { status?: number }).status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/** The caller's checkouts: SENT-only newest-first for the owner, own rows of
+ * any status for the walker. `limit` (1..100) is only sent when given. */
+export function fetchCheckouts(limit?: number): Promise<OwnerCheckout[]> {
+  const query = limit === undefined ? "" : `?limit=${limit}`;
+  return request<OwnerCheckout[]>(`/checkouts${query}`);
+}
+
+/** One dog's timeline: accepted walks and sent checkouts mixed in time order. */
+export function fetchTimeline(dogId: string, order: TimelineOrder): Promise<TimelineItem[]> {
+  return request<TimelineItem[]>(
+    `/dogs/${encodeURIComponent(dogId)}/timeline?order=${order}`,
+  );
+}
+
+/** Edit the walker's note on a draft (`null` clears it for a photos-only
+ * checkout). The AI fields are never writable. */
+export function updateCheckoutNote(
+  checkoutId: string,
+  note: string | null,
+): Promise<WalkerCheckout> {
+  return request<WalkerCheckout>(`/checkouts/${encodeURIComponent(checkoutId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ note }),
+  });
+}
+
+/** The human gate: publish the draft to the owner. Irreversible. */
+export function sendCheckout(checkoutId: string): Promise<SendCheckoutResult> {
+  return request<SendCheckoutResult>(
+    `/checkouts/${encodeURIComponent(checkoutId)}/send`,
+    { method: "POST" },
+  );
+}
+
+/** Ask the vision model again about a draft's photos; at the quota the API
+ * answers 429 and the Error carries "Monthly AI limit reached.". */
+export function rerunAiNote(checkoutId: string): Promise<WalkerCheckout> {
+  return request<WalkerCheckout>(
+    `/checkouts/${encodeURIComponent(checkoutId)}/ai-note`,
+    { method: "POST" },
+  );
+}
+
+/** The walker's AI quota for the current UTC month. */
+export function fetchAiQuota(): Promise<AiQuota> {
+  return request<AiQuota>("/ai-quota");
 }

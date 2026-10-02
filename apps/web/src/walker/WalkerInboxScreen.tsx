@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import {
   acceptRequest,
   declineRequest,
@@ -14,6 +14,16 @@ import { EmptyState } from "../ui/EmptyState.js";
 import { ListRow } from "../ui/ListRow.js";
 import { Toast } from "../ui/Toast.js";
 import { PawIcon } from "../ui/icons.js";
+
+// S3: the checkout flow lives behind a lazy boundary on purpose — it is only
+// loaded when a walker actually opens it from an accepted request, which
+// keeps this screen's module graph (and its api imports) exactly as small
+// as before for everybody else.
+const WalkerCheckoutScreen = lazy(() =>
+  import("./WalkerCheckoutScreen.js").then((module) => ({
+    default: module.WalkerCheckoutScreen,
+  })),
+);
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "message" in error) {
@@ -46,6 +56,8 @@ export function WalkerInboxScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<RequestConflict[]>([]);
+  // S3: the accepted request whose checkout flow is open (lazy-loaded below).
+  const [checkOutFor, setCheckOutFor] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -69,6 +81,7 @@ export function WalkerInboxScreen() {
     setActionError(null);
     setStatusMessage(null);
     setConflicts([]);
+    setCheckOutFor(null);
     setIsDetailLoading(true);
     try {
       const loaded = await fetchRequest<WalkerRequestView>(requestId);
@@ -84,6 +97,7 @@ export function WalkerInboxScreen() {
     setDetail(null);
     setDetailError(null);
     setActionError(null);
+    setCheckOutFor(null);
   }
 
   async function handleAccept() {
@@ -247,6 +261,25 @@ export function WalkerInboxScreen() {
                 Decline
               </Button>
             </div>
+          ) : null}
+          {detail.status === "accepted" ? (
+            <div className="inbox-detail__actions">
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  setCheckOutFor((current) => (current === null ? detail.id : null))
+                }
+              >
+                {checkOutFor === null ? "Check out" : "Close checkout"}
+              </Button>
+            </div>
+          ) : null}
+          {checkOutFor !== null ? (
+            <Suspense
+              fallback={<p className="app-shell__status">Loading checkout...</p>}
+            >
+              <WalkerCheckoutScreen requestId={checkOutFor} />
+            </Suspense>
           ) : null}
         </div>
       ) : null}

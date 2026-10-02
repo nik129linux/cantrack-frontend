@@ -853,3 +853,236 @@ select.form-input {
   font-size: var(--text-body);
   font-weight: 800;
 }
+
+/* ------------------------------------------------------------------ */
+/* S3 — walker checkout screen                                         */
+/* ------------------------------------------------------------------ */
+
+.checkout-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.checkout-screen__hint {
+  color: var(--c-muted);
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+
+.checkout-screen__label {
+  display: block;
+  color: var(--c-ink);
+  font-size: var(--text-section);
+  font-weight: var(--weight-section);
+  margin-bottom: 6px;
+}
+
+.checkout-screen__file {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-tile);
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font: inherit;
+}
+
+.checkout-screen__previews,
+.checkout-screen__photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.checkout-screen__preview {
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: var(--radius-tile);
+  box-shadow: var(--shadow-soft, 0 8px 20px rgb(20 48 31 / 0.12));
+}
+
+.checkout-screen__ai {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--c-lavender);
+  color: var(--c-ink);
+  font-size: var(--text-caption);
+  font-weight: 800;
+}
+
+.checkout-screen__warning {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--c-coral);
+  color: var(--c-ink);
+  font-size: var(--text-caption);
+  font-weight: 800;
+}
+
+.checkout-screen__note {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: none;
+  border-radius: var(--radius-tile);
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font: inherit;
+  font-weight: 600;
+  resize: vertical;
+}
+
+.checkout-screen__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.checkout-screen__status {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--c-sage);
+  color: var(--c-ink);
+  font-size: var(--text-caption);
+  font-weight: 800;
+}
+
+.checkout-screen__sent-note {
+  color: var(--c-muted);
+  font-style: italic;
+}
+
+/* ------------------------------------------------------------------ */
+/* S3 — owner activity screen                                          */
+/* ------------------------------------------------------------------ */
+
+.activity-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.activity-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-card);
+  background: var(--c-surface);
+  box-shadow: 0 10px 24px rgb(20 48 31 / 0.1);
+}
+
+.activity-card__photos {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.activity-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.activity-card__title {
+  color: var(--c-ink);
+  font-size: var(--text-body);
+  font-weight: 800;
+}
+
+.activity-card__walker {
+  color: var(--c-green-800);
+}
+
+.activity-card__note {
+  color: var(--c-ink);
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+
+.activity-card__note--empty {
+  color: var(--c-muted);
+  font-style: italic;
+}
+
+.activity-card__time {
+  color: var(--c-muted);
+  font-size: var(--text-caption);
+  font-weight: 700;
+}
+
+.activity-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.activity-timeline__icon {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.activity-timeline__dogs,
+.activity-timeline__order {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.activity-timeline__items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.activity-timeline__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: var(--radius-tile);
+  background: var(--c-mint-wash);
+}
+
+.activity-timeline__label {
+  color: var(--c-ink);
+  font-size: var(--text-body);
+  font-weight: 800;
+}
+
+.activity-timeline__when {
+  color: var(--c-muted);
+  font-size: var(--text-caption);
+  font-weight: 700;
+}
+
+.activity-timeline__note {
+  flex-basis: 100%;
+  color: var(--c-muted);
+  font-size: var(--text-caption);
+  font-style: italic;
+  font-weight: 600;
+}

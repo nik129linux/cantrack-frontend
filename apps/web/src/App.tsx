@@ -5,6 +5,7 @@ import {
   ResetPasswordScreen,
   SignupScreen,
 } from "./auth/AuthScreens.js";
+import { OwnerActivityScreen } from "./owner/OwnerActivityScreen.js";
 import { OwnerDiscoverScreen } from "./owner/OwnerDiscoverScreen.js";
 import { OwnerDogsScreen } from "./owner/OwnerDogsScreen.js";
 import { WalkerClientsScreen } from "./walker/WalkerClientsScreen.js";
@@ -235,7 +236,8 @@ function OwnerShell() {
       <div className="app-shell__panel app-shell__panel--owner">
         {tab === "My dogs" ? <OwnerDogsScreen /> : null}
         {tab === "Discover" ? <OwnerDiscoverScreen /> : null}
-        {tab === "Activity" || tab === "Profile" ? <ComingSoon section={tab} /> : null}
+        {tab === "Activity" ? <OwnerActivityScreen /> : null}
+        {tab === "Profile" ? <ComingSoon section={tab} /> : null}
       </div>
       <BottomNav role="owner" active={tab} onNavigate={setTab} />
     </div>
