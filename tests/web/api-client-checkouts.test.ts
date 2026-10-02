@@ -66,6 +66,11 @@ describe("API client — S3 checkout surface", () => {
 
   it("fetchCheckouts GETs the list and appends limit when given", async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse([]));
+    // One mocked response per awaited call: the second fetchCheckouts below
+    // is a second request, and without its own response the shared request()
+    // helper would hit `undefined.ok` — every implementation that propagates
+    // fetch failures (which the screen error states depend on) rejects here.
+    mockFetch.mockResolvedValueOnce(jsonResponse([]));
     const { fetchCheckouts } = await api();
     await fetchCheckouts();
     expect(String(mockFetch.mock.calls[0][0])).toMatch(/\/checkouts$/);

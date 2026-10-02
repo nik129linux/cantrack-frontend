@@ -178,7 +178,13 @@ describe("Owner activity screen (S3)", () => {
       await Promise.resolve();
     });
 
-    expect(await screen.findByText("New checkout from Ana Packs")).toBeInTheDocument();
+    // getByText, not findByText: the act() above has already committed the
+    // toast, and RTL v16's asyncWrapper drains via setTimeout(0) that it only
+    // auto-advances for JEST fake timers — under vi.useFakeTimers() ANY
+    // findBy* hangs forever even when the element is present (reproduced with
+    // a bare waitFor(getByText) on an existing element). Same assertion,
+    // synchronous.
+    expect(screen.getByText("New checkout from Ana Packs")).toBeInTheDocument();
   });
 
   it("shows the dog timeline newest first and toggles to oldest first", async () => {
@@ -189,7 +195,10 @@ describe("Owner activity screen (S3)", () => {
     const user = userEvent.setup();
     await renderActivity();
 
-    await screen.findByTestId("timeline-item");
+    // findAll, not find: the feed has TWO items and findByTestId throws on
+    // multiple matches — while the getAllByTestId right below indexes [0]
+    // and [1]. The pair was unsatisfiable as written.
+    await screen.findAllByTestId("timeline-item");
     expect(mockFetchTimeline).toHaveBeenCalledWith("dog-1", "desc");
     let items = screen.getAllByTestId("timeline-item");
     expect(items[0]).toHaveTextContent(/Checkout ·/);
@@ -211,7 +220,7 @@ describe("Owner activity screen (S3)", () => {
     mockFetchCheckouts.mockResolvedValue([CHECKOUT_A]);
     mockFetchTimeline.mockResolvedValue([CHECKOUT_ITEM, WALK_ITEM]);
     await renderActivity();
-    await screen.findByTestId("timeline-item");
+    await screen.findAllByTestId("timeline-item"); // two items: find* would throw
     expect(screen.queryByText(/2026-10-05T/)).not.toBeInTheDocument();
   });
 });
