@@ -213,7 +213,12 @@ export function WalkerRouteScreen({
 
   return (
     <main ref={screenRef} className="walker-screen" data-cantrack-walker-route-screen>
-      <Banner title="Walker route" subtitle="Stops in order, check in at each one." tint="sky" />
+      <Banner
+        title="Walker route"
+        subtitle="Stops in order, check in at each one."
+        tint="sky"
+        character="walker"
+      />
 
       <div className="walker-screen__tools">
         <Button variant="secondary" onClick={() => void handleUndo()} disabled={isUndoing}>

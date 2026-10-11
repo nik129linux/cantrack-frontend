@@ -1,5 +1,7 @@
 import type { HTMLAttributes } from "react";
+import type { Character } from "../art.js";
 import { Button } from "./Button.js";
+import { InteractiveMascot } from "./InteractiveMascot.js";
 import { PawIcon } from "./icons.js";
 
 export type BannerProps = HTMLAttributes<HTMLDivElement> & {
@@ -9,13 +11,23 @@ export type BannerProps = HTMLAttributes<HTMLDivElement> & {
   actionLabel?: string;
   onAction?: () => void;
   tint?: string;
+  /** Optional cut-out character on the right of the hero. */
+  character?: Character;
 };
 
 /**
  * Hero banner card: tinted background, paw-print pattern at 12% opacity,
  * illustration cut-out on the right, one white pill button (DESIGN.md).
  */
-export function Banner({ title, subtitle, actionLabel, onAction, tint = "sage", ...rest }: BannerProps) {
+export function Banner({
+  title,
+  subtitle,
+  actionLabel,
+  onAction,
+  tint = "sage",
+  character,
+  ...rest
+}: BannerProps) {
   return (
     <div className="ui-banner" data-tint={tint} {...rest}>
       <span className="ui-banner__pattern" aria-hidden="true" />
@@ -33,7 +45,11 @@ export function Banner({ title, subtitle, actionLabel, onAction, tint = "sage", 
         ) : null}
       </div>
       <span className="ui-banner__art" aria-hidden="true">
-        <PawIcon />
+        {character !== undefined ? (
+          <InteractiveMascot character={character} decorative size={132} />
+        ) : (
+          <PawIcon />
+        )}
       </span>
     </div>
   );

@@ -23,6 +23,7 @@ import { EmptyState } from "./ui/EmptyState.js";
 import { ListRow } from "./ui/ListRow.js";
 import { Pill } from "./ui/Pill.js";
 import { ClockIcon } from "./ui/icons.js";
+import { playTap, isAudioEnabled, toggleAudio } from "./lib/sound.js";
 import "./ui/tokens.css";
 import "./app-shell.css";
 
@@ -75,26 +76,44 @@ function AuthShell() {
   return (
     <div className="app-shell__panel app-shell__panel--auth auth-panel auth-panel--mint">
       <header className="app-shell__brand">
-        <span className="app-shell__brand-mark" aria-hidden="true">C</span>
+        <span className="app-shell__brand-mark" aria-hidden="true">🐾</span>
         <div>
-          <p className="app-shell__eyebrow">Neighbourhood walks</p>
+          <p className="app-shell__eyebrow">Smart Canine Network</p>
           <h1 className="app-shell__brand-name">CanTrack</h1>
         </div>
       </header>
       <nav className="auth-switcher" aria-label="Account access">
-        <Pill active={view === "signup"} onClick={() => setView("signup")}>
+        <Pill
+          active={view === "signup"}
+          onClick={() => {
+            playTap(480);
+            setView("signup");
+          }}
+        >
           Sign up
         </Pill>
-        <Pill active={view === "login"} onClick={() => setView("login")}>
+        <Pill
+          active={view === "login"}
+          onClick={() => {
+            playTap(480);
+            setView("login");
+          }}
+        >
           Log in
         </Pill>
-        <Pill active={view === "reset"} onClick={() => setView("reset")}>
+        <Pill
+          active={view === "reset"}
+          onClick={() => {
+            playTap(480);
+            setView("reset");
+          }}
+        >
           Reset
         </Pill>
       </nav>
-      {view === "signup" ? <SignupScreen /> : null}
-      {view === "login" ? <LoginScreen /> : null}
-      {view === "reset" ? <ResetPasswordScreen /> : null}
+      {view === "signup" ? <SignupScreen onSwitchToLogin={() => setView("login")} /> : null}
+      {view === "login" ? <LoginScreen onForgotPassword={() => setView("reset")} /> : null}
+      {view === "reset" ? <ResetPasswordScreen onBackToLogin={() => setView("login")} /> : null}
     </div>
   );
 }
@@ -135,6 +154,7 @@ function RouteList({ onOpen }: { onOpen: (route: Route) => void }) {
         title="Your routes"
         subtitle={`Today’s schedule · ${routes.length} ${routes.length === 1 ? "route" : "routes"}`}
         tint="sky"
+        character="walker"
       />
 
       {isLoading ? <p className="app-shell__status">Loading routes...</p> : null}
@@ -143,6 +163,7 @@ function RouteList({ onOpen }: { onOpen: (route: Route) => void }) {
         <EmptyState
           title="No routes scheduled"
           message="Your next walk will appear here when it is ready."
+          character="walker"
         />
       ) : null}
 
@@ -247,6 +268,7 @@ function OwnerShell() {
 export function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [soundOn, setSoundOn] = useState(true);
   const shellRef = useAppShellMount();
 
   useEffect(() => {
@@ -297,9 +319,32 @@ export function App() {
 
   return (
     <div ref={shellRef} className="app-shell" data-cantrack-app-shell>
+      <div className="ios-status-bar" aria-hidden="true">
+        <span className="ios-status-bar__time">9:41</span>
+        <div className="ios-dynamic-island">
+          <span className="ios-dynamic-island__cam" />
+          <span className="ios-dynamic-island__indicator">🐾</span>
+        </div>
+        <div className="ios-status-bar__icons">
+          <span>📶</span>
+          <span>📡</span>
+          <span>🔋 100%</span>
+        </div>
+      </div>
       {session !== null ? (
         <div className="app-shell__topbar">
           <span className="app-shell__eyebrow">CanTrack</span>
+          <button
+            type="button"
+            className="sound-toggle-btn"
+            onClick={() => {
+              const next = toggleAudio();
+              setSoundOn(next);
+            }}
+            title={soundOn ? "Silenciar audio" : "Activar audio"}
+          >
+            {soundOn ? "🔊" : "🔇"}
+          </button>
           <Button
             className="app-shell__logout"
             variant="ghost"

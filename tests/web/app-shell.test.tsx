@@ -79,6 +79,7 @@ describe("App shell", () => {
   beforeEach(() => {
     mockGetSession.mockReset();
     mockFetchRoutes.mockReset();
+    mockFetchRoutes.mockResolvedValue([]);
     mockOnAuthStateChange.mockReset();
     mockOnAuthStateChange.mockReturnValue({
       data: { subscription: { unsubscribe: vi.fn() } },
@@ -149,6 +150,7 @@ describe("App shell — S0 role-based bottom navigation", () => {
   beforeEach(() => {
     mockGetSession.mockReset();
     mockFetchRoutes.mockReset();
+    mockFetchRoutes.mockResolvedValue([]);
     mockOnAuthStateChange.mockReset();
     mockOnAuthStateChange.mockReturnValue({
       data: { subscription: { unsubscribe: vi.fn() } },

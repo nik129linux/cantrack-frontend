@@ -256,7 +256,7 @@ export function OwnerDogsScreen() {
 
   return (
     <main ref={screenRef} className="owner-screen" data-cantrack-owner-dogs-screen>
-      <Banner title="My dogs" subtitle="Your pack, reference photos and walks." tint="sage" />
+      <Banner title="My dogs" subtitle="Your pack, reference photos and walks." tint="sage" character="dog" />
 
       <section className="owner-screen__section--list" aria-labelledby="dog-list-heading">
         <h2 className="section-title" id="dog-list-heading">Dogs</h2>
@@ -266,6 +266,7 @@ export function OwnerDogsScreen() {
           <EmptyState
             title="No dogs yet."
             message="Add your first dog below, then enroll its 3 reference photos."
+            character="dog"
           />
         ) : null}
         {dogs.length > 0 ? (

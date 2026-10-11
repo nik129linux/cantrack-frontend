@@ -1,5 +1,7 @@
 import type { HTMLAttributes } from "react";
+import type { Character } from "../art.js";
 import { Button } from "./Button.js";
+import { InteractiveMascot } from "./InteractiveMascot.js";
 import { PawIcon } from "./icons.js";
 
 export type EmptyStateProps = HTMLAttributes<HTMLDivElement> & {
@@ -7,18 +9,29 @@ export type EmptyStateProps = HTMLAttributes<HTMLDivElement> & {
   message?: string;
   actionLabel?: string;
   onAction?: () => void;
+  character?: Character;
 };
 
 /**
- * Friendly flat empty state (DESIGN.md: prefer a simple character/icon over a
- * literal photo placeholder). Title renders as a heading so it is announced.
+ * Friendly empty state. Title renders as a heading so it is announced.
  */
-export function EmptyState({ title, message, actionLabel, onAction, ...rest }: EmptyStateProps) {
+export function EmptyState({
+  title,
+  message,
+  actionLabel,
+  onAction,
+  character,
+  ...rest
+}: EmptyStateProps) {
   return (
     <div className="ui-empty" {...rest}>
-      <span className="ui-empty__icon" aria-hidden="true">
-        <PawIcon />
-      </span>
+      {character !== undefined ? (
+        <InteractiveMascot character={character} decorative size={120} className="ui-empty__mascot" />
+      ) : (
+        <span className="ui-empty__icon" aria-hidden="true">
+          <PawIcon />
+        </span>
+      )}
       <h2 className="ui-empty__title">{title}</h2>
       {message !== undefined && message !== "" ? (
         <p className="ui-empty__message">{message}</p>
