@@ -71,49 +71,92 @@ function useAppShellMount() {
 }
 
 function AuthShell() {
-  const [view, setView] = useState<AuthView>("signup");
+  const [view, setView] = useState<AuthView>(() => {
+    if (typeof window !== "undefined") {
+      const param = new URLSearchParams(window.location.search).get("view");
+      if (param === "login" || param === "signup" || param === "reset") {
+        return param;
+      }
+    }
+    return "login";
+  });
 
   return (
-    <div className="app-shell__panel app-shell__panel--auth auth-panel auth-panel--mint">
-      <header className="app-shell__brand">
-        <span className="app-shell__brand-mark" aria-hidden="true">🐾</span>
-        <div>
-          <p className="app-shell__eyebrow">Smart Canine Network</p>
-          <h1 className="app-shell__brand-name">CanTrack</h1>
+    <div className="air-hero-grid">
+      {/* Left Column: Air Atmospheric Presentation & Telemetry */}
+      <section className="air-hero-info">
+        <div className="air-eyebrow">CANTRACK · CANINE OPERATIONS SYSTEM</div>
+        <h1 className="air-hero-title">
+          The workspace for <span className="air-cursive">canine care</span>
+        </h1>
+        <p className="air-hero-description">
+          Real-time GPS telemetry, biometric dog recognition, and Dijkstra route optimization powered by custom university data structures.
+        </p>
+
+        <div className="air-stats-grid">
+          <div className="air-stat-card">
+            <span className="air-stat-value">3</span>
+            <span className="air-stat-label">Perros en base de datos</span>
+            <span className="air-stat-sub">Rocky, Luna & Max</span>
+          </div>
+          <div className="air-stat-card">
+            <span className="air-stat-value">:3000</span>
+            <span className="air-stat-label">FastAPI Backend</span>
+            <span className="air-stat-sub">Conectado y respondiendo</span>
+          </div>
+          <div className="air-stat-card">
+            <span className="air-stat-value">Dijkstra</span>
+            <span className="air-stat-label">Rutas Óptimas</span>
+            <span className="air-stat-sub">Grafos ponderados</span>
+          </div>
         </div>
-      </header>
-      <nav className="auth-switcher" aria-label="Account access">
-        <Pill
-          active={view === "signup"}
-          onClick={() => {
-            playTap(480);
-            setView("signup");
-          }}
-        >
-          Sign up
-        </Pill>
-        <Pill
-          active={view === "login"}
-          onClick={() => {
-            playTap(480);
-            setView("login");
-          }}
-        >
-          Log in
-        </Pill>
-        <Pill
-          active={view === "reset"}
-          onClick={() => {
-            playTap(480);
-            setView("reset");
-          }}
-        >
-          Reset
-        </Pill>
-      </nav>
-      {view === "signup" ? <SignupScreen onSwitchToLogin={() => setView("login")} /> : null}
-      {view === "login" ? <LoginScreen onForgotPassword={() => setView("reset")} /> : null}
-      {view === "reset" ? <ResetPasswordScreen onBackToLogin={() => setView("login")} /> : null}
+
+        <div className="air-feature-list">
+          <div className="air-feature-item">
+            <span className="air-feature-dot"></span>
+            <span>Pilas (Stack) para reversión de check-in instantánea</span>
+          </div>
+          <div className="air-feature-item">
+            <span className="air-feature-dot"></span>
+            <span>Colas (Queue) para solicitudes de paseo en orden FIFO</span>
+          </div>
+          <div className="air-feature-item">
+            <span className="air-feature-dot"></span>
+            <span>Listas circulares y dobles para seguimiento continuo</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Right Column: Air Haze Card for Login/Signup */}
+      <div className="air-card-column">
+        <div className="air-haze-card">
+          <div className="air-card-topbar">
+            <div className="air-card-title-group">
+              <span className="air-card-badge">ACCESO A LA PLATAFORMA</span>
+              <h2 className="air-card-heading">
+                {view === "login" ? "Iniciar Sesión" : view === "signup" ? "Crear Cuenta" : "Recuperar Acceso"}
+              </h2>
+            </div>
+            <nav className="auth-switcher" aria-label="Account access">
+              <Pill active={view === "login"} onClick={() => { playTap(480); setView("login"); }}>
+                Log in
+              </Pill>
+              <Pill active={view === "signup"} onClick={() => { playTap(480); setView("signup"); }}>
+                Sign up
+              </Pill>
+              <Pill active={view === "reset"} onClick={() => { playTap(480); setView("reset"); }}>
+                Reset
+              </Pill>
+            </nav>
+          </div>
+
+          <div className="air-card-body">
+            {view === "signup" ? <SignupScreen onSwitchToLogin={() => setView("login")} /> : null}
+            {view === "login" ? <LoginScreen onForgotPassword={() => setView("reset")} /> : null}
+            {view === "reset" ? <ResetPasswordScreen onBackToLogin={() => setView("login")} /> : null}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -273,6 +316,27 @@ export function App() {
 
   useEffect(() => {
     let isMounted = true;
+
+    function handleDemoLogin(event: Event) {
+      const customEvent = event as CustomEvent<Session>;
+      if (customEvent.detail && isMounted) {
+        setSession(customEvent.detail);
+        setAuthError(null);
+      }
+    }
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("cantrack-demo-login", handleDemoLogin);
+      try {
+        const saved = localStorage.getItem("cantrack_demo_session");
+        if (saved && session === undefined) {
+          setSession(JSON.parse(saved));
+        }
+      } catch {
+        // ignore storage error
+      }
+    }
+
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (isMounted) {
         setSession(nextSession);
@@ -287,20 +351,25 @@ export function App() {
           throw error;
         }
 
-        if (isMounted) {
+        if (isMounted && currentSession !== null) {
           setSession(currentSession);
+        } else if (isMounted && session === undefined) {
+          setSession(null);
         }
       })
-      .catch((error: unknown) => {
+      .catch((_error: unknown) => {
         if (isMounted) {
-          setSession(null);
-          setAuthError(getErrorMessage(error, "Unable to check your session."));
+          // If no active remote session or offline, simply treat as logged out
+          setSession((prev) => (prev !== undefined ? prev : null));
         }
       });
 
     return () => {
       isMounted = false;
       data.subscription.unsubscribe();
+      if (typeof window !== "undefined") {
+        window.removeEventListener("cantrack-demo-login", handleDemoLogin);
+      }
     };
   }, []);
 
@@ -318,51 +387,109 @@ export function App() {
   const userId = session?.user.id ?? "";
 
   return (
-    <div ref={shellRef} className="app-shell" data-cantrack-app-shell>
-      <div className="ios-status-bar" aria-hidden="true">
-        <span className="ios-status-bar__time">9:41</span>
-        <div className="ios-dynamic-island">
-          <span className="ios-dynamic-island__cam" />
-          <span className="ios-dynamic-island__indicator">🐾</span>
+    <div ref={shellRef} className="air-root-layout" data-cantrack-app-shell>
+      {/* Air Top Navigation Bar */}
+      <header className="air-nav-header">
+        <div className="air-nav-left">
+          <a href="/" className="air-nav-logo">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="12 8 8 12 12 16 16 12 12 8" />
+            </svg>
+            <span className="air-nav-brand">CanTrack</span>
+          </a>
+          <span className="air-nav-divider">/</span>
+          <span className="air-nav-section">Operations</span>
         </div>
-        <div className="ios-status-bar__icons">
-          <span>📶</span>
-          <span>📡</span>
-          <span>🔋 100%</span>
-        </div>
-      </div>
-      {session !== null ? (
-        <div className="app-shell__topbar">
-          <span className="app-shell__eyebrow">CanTrack</span>
+
+        <nav className="air-nav-links">
+          <span className="air-nav-tag">FastAPI :3000 Online</span>
+          <span className="air-nav-tag">Local DB</span>
+          <span className="air-nav-tag">Dijkstra Telemetry</span>
+        </nav>
+
+        <div className="air-nav-right">
           <button
             type="button"
-            className="sound-toggle-btn"
+            className="air-ghost-button air-sound-btn"
             onClick={() => {
               const next = toggleAudio();
               setSoundOn(next);
             }}
             title={soundOn ? "Silenciar audio" : "Activar audio"}
           >
-            {soundOn ? "🔊" : "🔇"}
+            {soundOn ? "🔊 Audio" : "🔇 Mute"}
           </button>
-          <Button
-            className="app-shell__logout"
-            variant="ghost"
-            onClick={() => void supabase.auth.signOut()}
-          >
-            Log out
-          </Button>
+
+          {session === null ? (
+            <div className="air-nav-actions">
+              <button
+                type="button"
+                className="air-ghost-button"
+                onClick={() => {
+                  const demoSession = {
+                    access_token: "demo-token",
+                    user: { id: "demo-walker-1", email: "walker@cantrack.app", user_metadata: { role: "walker" } },
+                  };
+                  localStorage.setItem("cantrack_demo_session", JSON.stringify(demoSession));
+                  setSession(demoSession as any);
+                }}
+              >
+                Demo Paseador
+              </button>
+              <button
+                type="button"
+                className="air-solid-button"
+                onClick={() => {
+                  const demoSession = {
+                    access_token: "demo-token",
+                    user: { id: "demo-owner-1", email: "owner@cantrack.app", user_metadata: { role: "owner" } },
+                  };
+                  localStorage.setItem("cantrack_demo_session", JSON.stringify(demoSession));
+                  setSession(demoSession as any);
+                }}
+              >
+                Demo Dueño
+              </button>
+            </div>
+          ) : (
+            <div className="air-user-menu">
+              <span className="air-role-badge">{role === "owner" ? "Dueño" : "Paseador"}</span>
+              <span className="air-user-email">{session.user.email}</span>
+              <button
+                type="button"
+                className="air-ghost-button air-logout-button"
+                onClick={() => {
+                  try {
+                    localStorage.removeItem("cantrack_demo_session");
+                  } catch {}
+                  void supabase.auth.signOut();
+                  setSession(null);
+                }}
+              >
+                Log out
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {authError !== null ? (
+        <div className="air-alert-container">
+          <p className="app-shell__alert" role="alert">{authError}</p>
         </div>
       ) : null}
-      {authError !== null ? <p className="app-shell__alert" role="alert">{authError}</p> : null}
-      {session === null ? <AuthShell /> : null}
-      {role === "owner" ? <OwnerShell /> : null}
-      {role === "walker" ? <WalkerShell userId={userId} /> : null}
-      {session !== null && role !== "owner" && role !== "walker" ? (
-        <div className="app-shell__panel app-shell__status" role="alert">
-          This account does not have a walker or owner role.
-        </div>
-      ) : null}
+
+      <main className="air-main-container">
+        {session === null ? <AuthShell /> : null}
+        {role === "owner" ? <OwnerShell /> : null}
+        {role === "walker" ? <WalkerShell userId={userId} /> : null}
+        {session !== null && role !== "owner" && role !== "walker" ? (
+          <div className="air-status-box" role="alert">
+            Esta cuenta no tiene asignado un rol de paseador o dueño.
+          </div>
+        ) : null}
+      </main>
     </div>
   );
 }

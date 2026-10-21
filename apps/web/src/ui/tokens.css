@@ -2,54 +2,49 @@
    Single kit stylesheet: design tokens, base a11y rules and the classes of the
    13 components in apps/web/src/ui/. Loaded once from the app entry.
    Mobile first (designed at 390px, centered 480px column on desktop). */
-@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap");
-
 :root {
-  /* Palette — fixed by Nico, contrast ratios computed 2026-09-30 (WCAG). */
-  --c-sage: #ADEBB3;
-  --c-green: #45C55D;
-  --c-green-700: #1F7A35;
-  --c-green-800: #17612A;
-  --c-mint-wash: #EAFBEC;
-  --c-bg: #F4FAF3;
-  --c-surface: #FFFFFF;
-  --c-ink: #14301F;
-  --c-muted: #4F6A58;
-  --c-peach: #FFC9A8;
-  --c-orange: #FF9F5A;
-  --c-lavender: #C9B8F5;
-  --c-violet: #7A5FD6;
-  --c-sky: #A9DCF7;
-  --c-sky-700: #1F6F9E;
-  --c-butter: #FFE49A;
-  --c-coral: #FF8F85;
-  --c-coral-700: #C23A33;
+  /* Air Design System Palette — https://styles.refero.design/style/d3289fe7-a85e-42d8-96b7-eb7faa62a104 */
+  --c-sage: #426188;
+  --c-green: #2b7fff;
+  --c-green-700: #1f6fe6;
+  --c-green-800: #1652b0;
+  --c-mint-wash: rgba(43, 127, 255, 0.1);
+  --c-bg: #000000;
+  --c-surface: #0c1017;
+  --c-ink: #ffffff;
+  --c-muted: #94a3b8;
+  --c-peach: #f5f5f5;
+  --c-orange: #2b7fff;
+  --c-lavender: #426188;
+  --c-violet: #2b7fff;
+  --c-sky: #426188;
+  --c-sky-700: #2b7fff;
+  --c-butter: #f5f5f5;
+  --c-coral: #ef4444;
+  --c-coral-700: #dc2626;
 
-  /* Radii (DESIGN.md: cards 28, tiles 20, chips/pills and buttons 999). */
-  --radius-card: 28px;
-  --radius-tile: 20px;
+  /* Air Strict Radii */
+  --radius-card: 14px;
+  --radius-tile: 12px;
   --radius-pill: 999px;
-  --radius-button: 999px;
+  --radius-button: 8px;
 
-  /* Type: rounded and friendly. Sizes: title 28/800, section 18/700, body 16/600, caption 13/600. */
-  --font-family: "Nunito", "Avenir Next", system-ui, sans-serif;
-  --text-title: 28px;
-  --weight-title: 800;
-  --text-section: 18px;
-  --weight-section: 700;
-  --text-body: 16px;
-  --weight-body: 600;
+  /* Type: Air restrained typography */
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --text-title: 24px;
+  --weight-title: 700;
+  --text-section: 17px;
+  --weight-section: 600;
+  --text-body: 15px;
+  --weight-body: 500;
   --text-caption: 13px;
-  --weight-caption: 600;
+  --weight-caption: 500;
 
-  /* Cross-cutting a11y: every interactive kit element is at least 44px tall
-     and wide, and the keyboard ring is painted with the green-700 token. */
-  --tap-target: 44px;
-  --focus-ring-color: var(--c-green-700);
+  --tap-target: 40px;
+  --focus-ring-color: #2b7fff;
 
-  /* Soft shadows, no hard borders (DESIGN.md). */
-  --shadow-soft: 0 10px 28px rgb(20 48 31 / 8%);
-  --shadow-card: 0 16px 40px rgb(20 48 31 / 10%);
+  --shadow-soft: none;
+  --shadow-card: none;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --tint: var(--c-surface);
 }

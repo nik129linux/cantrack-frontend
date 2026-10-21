@@ -27,36 +27,14 @@ export function PeekingDog({
   const [bubbleText, setBubbleText] = useState<string | null>(null);
   const bubbleTimeoutRef = useRef<number | null>(null);
 
-  // Parallax pointer tracking
+  // Parallax pointer tracking removed per user request
   useEffect(() => {
-    function handleGlobalPointerMove(e: MouseEvent) {
-      const container = containerRef.current;
-      if (!container) return;
-
-      const rect = container.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-
-      // Normalised coordinates between -1 and 1
-      const deltaX = Math.max(-1, Math.min(1, (e.clientX - centerX) / (window.innerWidth / 2)));
-      const deltaY = Math.max(-1, Math.min(1, (e.clientY - centerY) / (window.innerHeight / 2)));
-
-      // 3D rotation angles
-      const rotY = deltaX * 16; // Head turns horizontally
-      const rotX = -deltaY * 12; // Head tilts vertically
-      const transX = deltaX * 8;
-      const transY = deltaY * 4;
-
-      container.style.setProperty("--dog-rot-y", `${rotY.toFixed(1)}deg`);
-      container.style.setProperty("--dog-rot-x", `${rotX.toFixed(1)}deg`);
-      container.style.setProperty("--dog-tx", `${transX.toFixed(1)}px`);
-      container.style.setProperty("--dog-ty", `${transY.toFixed(1)}px`);
-    }
-
-    window.addEventListener("mousemove", handleGlobalPointerMove, { passive: true });
-    return () => {
-      window.removeEventListener("mousemove", handleGlobalPointerMove);
-    };
+    const container = containerRef.current;
+    if (!container) return;
+    container.style.setProperty("--dog-rot-y", "0deg");
+    container.style.setProperty("--dog-rot-x", "0deg");
+    container.style.setProperty("--dog-tx", "0px");
+    container.style.setProperty("--dog-ty", "0px");
   }, []);
 
   function handleInteraction() {

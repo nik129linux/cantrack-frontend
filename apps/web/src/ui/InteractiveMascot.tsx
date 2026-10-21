@@ -27,29 +27,16 @@ export function InteractiveMascot({
     nodeRef.current = node;
   }
 
-  function onPointerMove(event: PointerEvent<HTMLElement>) {
-    const node = nodeRef.current;
-    if (node === null) {
-      return;
-    }
-
-    const box = node.getBoundingClientRect();
-    if (box.width === 0 || box.height === 0) {
-      return;
-    }
-
-    const x = ((event.clientX - box.left) / box.width - 0.5) * 18;
-    const y = ((event.clientY - box.top) / box.height - 0.5) * 14;
-    node.style.setProperty("--mx", `${x.toFixed(1)}px`);
-    node.style.setProperty("--my", `${y.toFixed(1)}px`);
+  function onPointerMove() {
+    // Parallax tracking removed per user request for clean, non-distracting UI
   }
 
   function onPointerLeave() {
+    // Reset properties if any
     const node = nodeRef.current;
     if (node === null) {
       return;
     }
-
     node.style.setProperty("--mx", "0px");
     node.style.setProperty("--my", "0px");
   }

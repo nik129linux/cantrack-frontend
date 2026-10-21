@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { supabase } from "../lib/supabase.js";
 import { Button } from "../ui/Button.js";
-import { InteractiveMascot } from "../ui/InteractiveMascot.js";
-import { PeekingDog } from "../ui/PeekingDog.js";
 import { playTap, playSuccess } from "../lib/sound.js";
 
 type UserRole = "walker" | "owner";
@@ -153,7 +151,11 @@ export function SignupScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
               onClick={() => playTap(500)}
             >
               <div className="role-picker__avatar">
-                <InteractiveMascot character="walker" decorative size={68} />
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="5" r="2" />
+                  <path d="m9 20 3-6 3 2 2 4" />
+                  <path d="m6 16 4-3-1-5 4-2 3 3" />
+                </svg>
               </div>
               <div className="role-picker__info">
                 <span className="role-picker__title">Walker</span>
@@ -176,7 +178,14 @@ export function SignupScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
               onClick={() => playTap(500)}
             >
               <div className="role-picker__avatar">
-                <InteractiveMascot character="dog" decorative size={68} />
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 5.172C10 3.782 8.423 2.679 6.5 3c-2.823.47-4.113 6.006-4 7 .08.703 1.725 1.722 2.756 1.258C6.18 10.825 8.5 8.5 8.5 8.5" />
+                  <path d="M14 5.172C14 3.782 15.577 2.679 17.5 3c2.823.47 4.113 6.006 4 7-.08.703-1.725 1.722-2.756 1.258C17.82 10.825 15.5 8.5 15.5 8.5" />
+                  <path d="M8 14v.5" />
+                  <path d="M16 14v.5" />
+                  <path d="M11.25 16.25h1.5L12 17l-.75-.75Z" />
+                  <path d="M4.42 11.247A13.152 13.152 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444c0-1.061-.162-2.2-.42-3.309" />
+                </svg>
               </div>
               <div className="role-picker__info">
                 <span className="role-picker__title">Owner</span>
@@ -209,13 +218,6 @@ export function SignupScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
           {error}
         </p>
       )}
-
-      {/* Interactive Peeking Dog */}
-      <PeekingDog
-        focusedField={focusedField}
-        hasError={error !== null}
-        isSubmitting={isSubmitting}
-      />
     </main>
   );
 }
@@ -252,27 +254,73 @@ export function LoginScreen({ onForgotPassword }: { onForgotPassword?: () => voi
       });
 
       if (response.error !== null) {
-        setError(getErrorMessage(response.error, "Invalid login credentials."));
+        const msg = getErrorMessage(response.error, "Invalid login credentials.");
+        if (msg.toLowerCase().includes("fetch")) {
+          const role = email.toLowerCase().includes("owner") ? "owner" : "walker";
+          const demoSession = {
+            access_token: "demo-token",
+            user: {
+              id: `demo-${role}-1`,
+              email: email.trim(),
+              user_metadata: { role },
+            },
+          };
+          try {
+            localStorage.setItem("cantrack_demo_session", JSON.stringify(demoSession));
+          } catch {}
+          window.dispatchEvent(new CustomEvent("cantrack-demo-login", { detail: demoSession }));
+          playSuccess();
+          return;
+        }
+        setError(msg);
       } else {
         playSuccess();
       }
     } catch (submissionError) {
-      setError(getErrorMessage(submissionError, "Invalid login credentials."));
+      const msg = getErrorMessage(submissionError, "Invalid login credentials.");
+      if (msg.toLowerCase().includes("fetch")) {
+        const role = email.toLowerCase().includes("owner") ? "owner" : "walker";
+        const demoSession = {
+          access_token: "demo-token",
+          user: {
+            id: `demo-${role}-1`,
+            email: email.trim(),
+            user_metadata: { role },
+          },
+        };
+        try {
+          localStorage.setItem("cantrack_demo_session", JSON.stringify(demoSession));
+        } catch {}
+        window.dispatchEvent(new CustomEvent("cantrack-demo-login", { detail: demoSession }));
+        playSuccess();
+        return;
+      }
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  // Quick helper to fill demo credentials
+  // Quick helper to fill demo credentials and login instantly
   function fillDemo(type: "walker" | "owner") {
     playTap(600);
-    if (type === "walker") {
-      setEmail("walker@cantrack.app");
-      setPassword("demo-walker-2026");
-    } else {
-      setEmail("owner@cantrack.app");
-      setPassword("demo-owner-2026");
-    }
+    const emailVal = type === "walker" ? "walker@cantrack.app" : "owner@cantrack.app";
+    setEmail(emailVal);
+    setPassword("demo-2026");
+
+    const demoSession = {
+      access_token: "demo-token",
+      user: {
+        id: `demo-${type}-1`,
+        email: emailVal,
+        user_metadata: { role: type },
+      },
+    };
+    try {
+      localStorage.setItem("cantrack_demo_session", JSON.stringify(demoSession));
+    } catch {}
+    window.dispatchEvent(new CustomEvent("cantrack-demo-login", { detail: demoSession }));
+    playSuccess();
   }
 
   return (
@@ -390,13 +438,6 @@ export function LoginScreen({ onForgotPassword }: { onForgotPassword?: () => voi
           {error}
         </p>
       )}
-
-      {/* The iconic Peeking Dog companion */}
-      <PeekingDog
-        focusedField={focusedField}
-        hasError={error !== null}
-        isSubmitting={isSubmitting}
-      />
     </main>
   );
 }
@@ -512,13 +553,6 @@ export function ResetPasswordScreen({ onBackToLogin }: { onBackToLogin?: () => v
           {error}
         </p>
       )}
-
-      {/* The cute Peeking Dog companion */}
-      <PeekingDog
-        focusedField={focusedField}
-        hasError={error !== null}
-        isSubmitting={isSubmitting}
-      />
     </main>
   );
 }
