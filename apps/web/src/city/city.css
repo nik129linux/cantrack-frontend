@@ -1,0 +1,64 @@
+/* Animated city: everything is positioned in island-image pixels and scaled
+   by --scale (container width / island width), so it fits any screen. */
+
+.city {
+  --scale: 1;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1025 / 906;
+  user-select: none;
+}
+
+.city__island {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 26px 30px rgb(15 50 100 / 35%));
+}
+
+.city__entity {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.city__sprite {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  display: block;
+  width: calc(var(--w) * var(--scale) * 1px);
+  height: auto;
+  transform: translateX(-50%);
+}
+
+.city__entity--car .city__sprite {
+  bottom: calc(-12px * var(--scale));
+}
+
+.city__entity[data-flip="true"] .city__sprite {
+  transform: translateX(-50%) scaleX(-1);
+}
+
+.city__entity--walker .city__sprite,
+.city__entity--dog .city__sprite {
+  filter: drop-shadow(0 3px 3px rgb(0 0 0 / 30%));
+}
+
+/* A soft glow under the walker so the eye finds them in the crowd. */
+.city__ring {
+  position: absolute;
+  bottom: calc(-6px * var(--scale));
+  left: 0;
+  width: calc(64px * var(--scale));
+  height: calc(22px * var(--scale));
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(205 240 122 / 80%), rgb(166 212 74 / 0%));
+  transform: translateX(-50%);
+}

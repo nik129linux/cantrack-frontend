@@ -1,0 +1,206 @@
+/* DogLoader: the dog gallops in place while something loads.
+   One stride = 0.46s: the body leaps and lands, the legs cross-fade between
+   two real poses, and everything around it streams backwards. */
+
+.dog-loader {
+  --stride: 0.46s;
+  --ease-leap: cubic-bezier(0.33, 0, 0.2, 1);
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  color: inherit;
+}
+
+.dog-loader__scene {
+  position: relative;
+  width: 250px;
+  height: 152px;
+  overflow: hidden;
+  border-radius: 26px;
+}
+
+/* Ground and grass tufts stream to the left, faster than the dashes. */
+
+.dog-loader__ground {
+  position: absolute;
+  right: 0;
+  bottom: 12px;
+  left: 0;
+  height: 4px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, currentcolor 0 26px, transparent 26px 46px);
+  opacity: 0.5;
+  animation: dog-stream-ground calc(var(--stride) * 1.1) linear infinite;
+}
+
+.dog-loader__grass {
+  position: absolute;
+  right: 0;
+  bottom: 16px;
+  left: 0;
+  height: 14px;
+  background:
+    radial-gradient(ellipse 7px 12px at 12px 14px, currentcolor 60%, transparent 62%) 0 0 / 70px 14px repeat-x,
+    radial-gradient(ellipse 5px 8px at 44px 14px, currentcolor 60%, transparent 62%) 0 0 / 70px 14px repeat-x;
+  opacity: 0.35;
+  animation: dog-stream-grass calc(var(--stride) * 2.2) linear infinite;
+}
+
+@keyframes dog-stream-ground {
+  to { background-position-x: -46px; }
+}
+
+@keyframes dog-stream-grass {
+  to { background-position-x: -70px, -70px; }
+}
+
+/* Speed lines behind the dog */
+
+.dog-loader__speed {
+  position: absolute;
+  left: 8%;
+  width: 46px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, currentcolor);
+  opacity: 0;
+  animation: dog-speed calc(var(--stride) * 1.6) linear infinite;
+}
+
+.dog-loader__speed--1 { top: 38%; }
+.dog-loader__speed--2 { top: 52%; width: 62px; animation-delay: calc(var(--stride) * -0.55); }
+.dog-loader__speed--3 { top: 66%; width: 38px; animation-delay: calc(var(--stride) * -1.1); }
+
+@keyframes dog-speed {
+  0% { opacity: 0; transform: translateX(34px) scaleX(0.4); }
+  30% { opacity: 0.55; }
+  100% { opacity: 0; transform: translateX(-26px) scaleX(1); }
+}
+
+/* The dog: x/y arc on the wrapper, pitch and squash on the body. */
+
+.dog-loader__dog {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  width: 124px;
+  height: 104px;
+  margin-left: -50px;
+  animation: dog-leap var(--stride) var(--ease-leap) infinite;
+}
+
+.dog-loader__body {
+  position: absolute;
+  inset: 0;
+  transform-origin: 30% 100%;
+  animation: dog-pitch var(--stride) ease-in-out infinite;
+}
+
+@keyframes dog-leap {
+  0%, 100% { transform: translate(-3px, 0); }
+  42% { transform: translate(4px, -15px); }
+  60% { transform: translate(5px, -12px); }
+}
+
+@keyframes dog-pitch {
+  0%, 100% { transform: rotate(2deg) scale(1.04, 0.95); }
+  42% { transform: rotate(-5deg) scale(0.97, 1.04); }
+  60% { transform: rotate(-3deg) scale(0.98, 1.03); }
+  82% { transform: rotate(3deg) scale(1.02, 0.97); }
+}
+
+/* Leg poses cross-fade: a soft motion blur instead of a hard flip. */
+
+.dog-loader__frame {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 124px;
+  height: auto;
+  filter: drop-shadow(0 5px 6px rgb(0 0 0 / 22%));
+  user-select: none;
+}
+
+.dog-loader__frame--a { animation: dog-frame-a var(--stride) ease-in-out infinite; }
+.dog-loader__frame--b { animation: dog-frame-b var(--stride) ease-in-out infinite; }
+
+@keyframes dog-frame-a {
+  0%, 100% { opacity: 1; }
+  45%, 55% { opacity: 0; }
+}
+
+@keyframes dog-frame-b {
+  0%, 100% { opacity: 0; }
+  45%, 55% { opacity: 1; }
+}
+
+/* Shadow shrinks while the dog is in the air. */
+
+.dog-loader__shadow {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  width: 92px;
+  height: 10px;
+  margin-left: -42px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(0 0 0 / 32%), transparent);
+  animation: dog-shadow var(--stride) var(--ease-leap) infinite;
+}
+
+@keyframes dog-shadow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  42% { opacity: 0.45; transform: scale(0.72); }
+}
+
+/* Dust kicked up behind the hind paws */
+
+.dog-loader__dust {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin-left: -60px;
+  border-radius: 50%;
+  background: currentcolor;
+  filter: blur(1.5px);
+  opacity: 0;
+  animation: dog-dust calc(var(--stride) * 2) ease-out infinite;
+}
+
+.dog-loader__dust--2 { animation-delay: calc(var(--stride) * 0.5); }
+.dog-loader__dust--3 { animation-delay: calc(var(--stride) * 1); }
+.dog-loader__dust--4 { animation-delay: calc(var(--stride) * 1.5); }
+
+@keyframes dog-dust {
+  0% { opacity: 0.5; transform: translate(0, 0) scale(0.4); }
+  100% { opacity: 0; transform: translate(-46px, -12px) scale(1.7); }
+}
+
+.dog-loader__label {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dog-loader__ground,
+  .dog-loader__grass,
+  .dog-loader__speed,
+  .dog-loader__dog,
+  .dog-loader__body,
+  .dog-loader__frame,
+  .dog-loader__shadow,
+  .dog-loader__dust {
+    animation: none;
+  }
+
+  .dog-loader__frame--b,
+  .dog-loader__speed,
+  .dog-loader__dust {
+    opacity: 0;
+  }
+}
+
