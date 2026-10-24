@@ -1,22 +1,17 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-// Separate import line on purpose: the S0 additions below need `within` and the
-// existing lines of this file stay byte-identical (no existing test touched).
-import { within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-// The app shell: routes between the auth screens (logged out) and a
-// role-based dashboard (logged in) — owner sees OwnerDogsScreen, walker sees
-// a list of their routes (fetchRoutes) that links into WalkerRouteScreen by
-// id. This is the piece that actually mounts the app; without it none of the
-// screens built in T11-T13 are reachable in a browser.
+// The app shell: routes between the auth screens (logged out) and the glass
+// home (logged in). The home lands on the "Inicio" panel; the "Principal"
+// navigation opens every real screen of the role (owner: Explorar, Mis perros,
+// Paseos, Perfil; walker: Solicitudes, Clientes, Rutas, Perfil).
 //
-// Supabase's session/auth-state and the route list are mocked, same pattern
-// as the rest of tests/web/. Visual/theme direction is NOT unit-tested here
-// (see AGENTS.md for the design brief) — this test only proves the shell
-// renders the right screen for the right auth/role state and wires
-// navigation, not that it looks a particular way.
+// Supabase's session/auth-state and the API calls are mocked, same pattern as
+// the rest of tests/web/. Visual direction is NOT unit-tested here — this only
+// proves the shell renders the right screen for the right auth/role state and
+// wires navigation.
 
 const mockGetSession = vi.fn();
 const mockOnAuthStateChange = vi.fn();
@@ -25,14 +20,15 @@ vi.mock("../../apps/web/src/lib/supabase.js", () => ({
     auth: {
       getSession: mockGetSession,
       onAuthStateChange: mockOnAuthStateChange,
+      signOut: vi.fn().mockResolvedValue({ error: null }),
     },
   },
 }));
 
 const mockFetchRoutes = vi.fn();
 // Every export the mounted screens call must exist on the mock: vitest throws when a missing
-// export is accessed, and that error lands on whichever test happens to be running (flaky
-// "renders the four owner tabs"). Unused-by-this-file calls resolve to empty data.
+// export is accessed, and that error lands on whichever test happens to be running.
+// Unused-by-this-file calls resolve to empty data.
 vi.mock("../../apps/web/src/lib/api.js", () => ({
   fetchRoutes: mockFetchRoutes,
   fetchDogs: vi.fn().mockResolvedValue([]),
@@ -75,35 +71,66 @@ function walkerSession() {
   };
 }
 
-describe("App shell", () => {
-  beforeEach(() => {
-    mockGetSession.mockReset();
-    mockFetchRoutes.mockReset();
-    mockOnAuthStateChange.mockReset();
-    mockOnAuthStateChange.mockReturnValue({
-      data: { subscription: { unsubscribe: vi.fn() } },
-    });
+function resetMocks() {
+  cleanup(); // earlier tests leave their screens mounted (no auto-cleanup)
+  mockGetSession.mockReset();
+  mockFetchRoutes.mockReset();
+  mockOnAuthStateChange.mockReset();
+  mockOnAuthStateChange.mockReturnValue({
+    data: { subscription: { unsubscribe: vi.fn() } },
   });
+}
 
-  it("shows the signup screen when logged out", async () => {
+async function openTab(user: ReturnType<typeof userEvent.setup>, name: string) {
+  const nav = await screen.findByRole("navigation", { name: "Principal" });
+  await user.click(within(nav).getByRole("button", { name }));
+  return nav;
+}
+
+describe("App shell", () => {
+  beforeEach(resetMocks);
+
+  it("shows the role screen first when logged out", async () => {
     mockGetSession.mockResolvedValue({ data: { session: null } });
 
     const { App } = await importApp();
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: /sign up/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "¿Cómo quieres usar CanTrack?" })).toBeInTheDocument();
   });
 
-  it("shows the owner dashboard for a logged-in owner", async () => {
+  it("lands a logged-in owner on the home panel", async () => {
     mockGetSession.mockResolvedValue({ data: ownerSession() });
 
     const { App } = await importApp();
     render(<App />);
 
+    expect(await screen.findByRole("heading", { name: "Hola, dueño", level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add dog/i })).not.toBeInTheDocument();
+  });
+
+  it("lands a logged-in walker on the home panel", async () => {
+    mockGetSession.mockResolvedValue({ data: walkerSession() });
+    mockFetchRoutes.mockResolvedValue([]);
+
+    const { App } = await importApp();
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Hola, cuidador", level: 1 })).toBeInTheDocument();
+  });
+
+  it("shows the owner's dogs screen from the Mis perros tab", async () => {
+    mockGetSession.mockResolvedValue({ data: ownerSession() });
+
+    const { App } = await importApp();
+    const user = userEvent.setup();
+    render(<App />);
+
+    await openTab(user, "Mis perros");
     expect(await screen.findByRole("button", { name: /add dog/i })).toBeInTheDocument();
   });
 
-  it("shows the walker's route list for a logged-in walker", async () => {
+  it("shows the walker's route list on the Rutas tab", async () => {
     mockGetSession.mockResolvedValue({ data: walkerSession() });
     mockFetchRoutes.mockResolvedValue([
       { id: "route-1", stops: [{ dogId: "dog-1", dogName: "Firulais" }] },
@@ -111,8 +138,10 @@ describe("App shell", () => {
     ]);
 
     const { App } = await importApp();
+    const user = userEvent.setup();
     render(<App />);
 
+    await openTab(user, "Rutas");
     // S2 polish item 3: route cards are titled with the first dog (plus the
     // formatted time when the stop carries one), never the route UUID.
     expect(await screen.findByText("Firulais")).toBeInTheDocument();
@@ -129,115 +158,109 @@ describe("App shell", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const routeLink = await screen.findByText("Firulais");
-    await user.click(routeLink);
+    await openTab(user, "Rutas");
+    await user.click(await screen.findByText("Firulais"));
 
-    await waitFor(() => expect(screen.getByText("Firulais")).toBeInTheDocument());
+    expect(await screen.findByRole("button", { name: /all routes/i })).toBeInTheDocument();
+  });
+
+  it("logs out through the Salir button", async () => {
+    mockGetSession.mockResolvedValue({ data: ownerSession() });
+    const { supabase } = await import("../../apps/web/src/lib/supabase.js");
+    const signOut = supabase.auth.signOut as unknown as ReturnType<typeof vi.fn>;
+    signOut.mockClear();
+
+    const { App } = await importApp();
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "Salir" }));
+    expect(signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("explains an account without a walker or owner role", async () => {
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "t", user: { id: "u-1", user_metadata: {} } } },
+    });
+
+    const { App } = await importApp();
+    render(<App />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This account does not have a walker or owner role.",
+    );
+    expect(screen.queryByRole("navigation", { name: "Principal" })).not.toBeInTheDocument();
   });
 });
 
-// S0 (UI kit) shell integration. App must render the role-based BottomNav as a
-// "Main" navigation with the exact tabs per role (DESIGN.md "Screens per role"),
-// mark the active tab with aria-current, show a "Coming soon" EmptyState for
-// tabs whose feature does not exist yet, keep the existing screens reachable
-// from their tab (walker "Today" -> route list, owner "My dogs" ->
-// OwnerDogsScreen), and actually load the kit tokens stylesheet. These cases
-// are ADDITIVE — the "App shell" describe above is untouched — and are red
-// until s0-impl wires BottomNav + tokens.css into the shell.
+// The glass navigation ("Principal") wraps the real screens: exact tabs per
+// role, the current tab carries aria-current, and every existing screen stays
+// reachable from its tab.
 
-describe("App shell — S0 role-based bottom navigation", () => {
-  beforeEach(() => {
-    mockGetSession.mockReset();
-    mockFetchRoutes.mockReset();
-    mockOnAuthStateChange.mockReset();
-    mockOnAuthStateChange.mockReturnValue({
-      data: { subscription: { unsubscribe: vi.fn() } },
-    });
-  });
+describe("App shell — glass navigation", () => {
+  beforeEach(resetMocks);
 
-  it("renders the four walker tabs in the Main navigation", async () => {
+  it("renders the five walker tabs", async () => {
     mockGetSession.mockResolvedValue({ data: walkerSession() });
     mockFetchRoutes.mockResolvedValue([]);
 
     const { App } = await importApp();
     render(<App />);
 
-    const nav = await screen.findByRole("navigation", { name: "Main" });
+    const nav = await screen.findByRole("navigation", { name: "Principal" });
     expect(within(nav).getAllByRole("button").map((tab) => tab.textContent?.trim())).toEqual([
-      "Today",
-      "Clients",
-      "Requests",
-      "Profile",
+      "Inicio",
+      "Solicitudes",
+      "Clientes",
+      "Rutas",
+      "Perfil",
     ]);
   });
 
-  it("renders the four owner tabs in the Main navigation", async () => {
+  it("renders the five owner tabs", async () => {
     mockGetSession.mockResolvedValue({ data: ownerSession() });
 
     const { App } = await importApp();
     render(<App />);
 
-    const nav = await screen.findByRole("navigation", { name: "Main" });
+    const nav = await screen.findByRole("navigation", { name: "Principal" });
     expect(within(nav).getAllByRole("button").map((tab) => tab.textContent?.trim())).toEqual([
-      "Discover",
-      "My dogs",
-      "Activity",
-      "Profile",
+      "Inicio",
+      "Explorar",
+      "Mis perros",
+      "Paseos",
+      "Perfil",
     ]);
   });
 
-  it("lands the owner on the My dogs tab by default", async () => {
-    mockGetSession.mockResolvedValue({ data: ownerSession() });
-
-    const { App } = await importApp();
-    render(<App />);
-
-    const nav = await screen.findByRole("navigation", { name: "Main" });
-    // The owner's default tab is My dogs (the existing owner dashboard test
-    // expects the dogs screen on first render); Discover must not be current.
-    expect(within(nav).getByRole("button", { name: "My dogs" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(within(nav).getByRole("button", { name: "Discover" })).not.toHaveAttribute(
-      "aria-current",
-    );
-  });
-
-  it("keeps the walker's route list on the Today tab", async () => {
-    mockGetSession.mockResolvedValue({ data: walkerSession() });
-    mockFetchRoutes.mockResolvedValue([
-      { id: "route-1", stops: [{ dogId: "dog-1", dogName: "Firulais" }] },
-    ]);
-
-    const { App } = await importApp();
-    render(<App />);
-
-    const nav = await screen.findByRole("navigation", { name: "Main" });
-    expect(within(nav).getByRole("button", { name: "Today" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(await screen.findByText("Firulais")).toBeInTheDocument();
-  });
-
-  it("keeps the owner's dogs screen on the My dogs tab", async () => {
+  it("starts on Inicio and moves the current marker when another tab opens", async () => {
     mockGetSession.mockResolvedValue({ data: ownerSession() });
 
     const { App } = await importApp();
     const user = userEvent.setup();
     render(<App />);
 
-    const nav = await screen.findByRole("navigation", { name: "Main" });
-    await user.click(within(nav).getByRole("button", { name: "My dogs" }));
-    expect(within(nav).getByRole("button", { name: "My dogs" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(await screen.findByRole("button", { name: /add dog/i })).toBeInTheDocument();
+    const nav = await screen.findByRole("navigation", { name: "Principal" });
+    expect(within(nav).getByRole("button", { name: "Inicio" })).toHaveAttribute("aria-current", "page");
+
+    await user.click(within(nav).getByRole("button", { name: "Mis perros" }));
+    expect(within(nav).getByRole("button", { name: "Mis perros" })).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByRole("button", { name: "Inicio" })).not.toHaveAttribute("aria-current");
   });
 
-  it("shows the clients screen on the Clients tab (S2)", async () => {
+  it("returns to the home panel from Inicio", async () => {
+    mockGetSession.mockResolvedValue({ data: ownerSession() });
+
+    const { App } = await importApp();
+    const user = userEvent.setup();
+    render(<App />);
+
+    await openTab(user, "Mis perros");
+    await openTab(user, "Inicio");
+    expect(await screen.findByRole("heading", { name: "Hola, dueño", level: 1 })).toBeInTheDocument();
+  });
+
+  it("shows the clients screen on the walker's Clientes tab (S2)", async () => {
     mockGetSession.mockResolvedValue({ data: walkerSession() });
     mockFetchRoutes.mockResolvedValue([]);
 
@@ -245,50 +268,35 @@ describe("App shell — S0 role-based bottom navigation", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // S2 builds the Clients tab, so the walker has no Coming soon tabs left;
-    // the owner's Activity it below keeps covering the Coming soon pattern.
-    const nav = await screen.findByRole("navigation", { name: "Main" });
-    await user.click(within(nav).getByRole("button", { name: "Clients" }));
-    expect(within(nav).getByRole("button", { name: "Clients" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    await openTab(user, "Clientes");
     expect(await screen.findByRole("heading", { name: "My clients" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Coming soon" })).not.toBeInTheDocument();
   });
 
-  it("shows a Coming soon empty state for an owner tab with no feature yet", async () => {
+  it("shows a Coming soon empty state on the owner's Perfil tab", async () => {
     mockGetSession.mockResolvedValue({ data: ownerSession() });
 
     const { App } = await importApp();
     const user = userEvent.setup();
     render(<App />);
 
-    // S3 builds the Activity tab (timeline + checkouts); Profile is the last
-    // owner tab still Coming soon (S4: ratings, discover extras).
-    const nav = await screen.findByRole("navigation", { name: "Main" });
-    await user.click(within(nav).getByRole("button", { name: "Profile" }));
+    await openTab(user, "Perfil");
     expect(await screen.findByRole("heading", { name: "Coming soon" })).toBeInTheDocument();
   });
 
-  it("shows the activity screen on the owner's Activity tab (S3)", async () => {
+  it("shows the activity screen on the owner's Paseos tab (S3)", async () => {
     mockGetSession.mockResolvedValue({ data: ownerSession() });
 
     const { App } = await importApp();
     const user = userEvent.setup();
     render(<App />);
 
-    const nav = await screen.findByRole("navigation", { name: "Main" });
-    await user.click(within(nav).getByRole("button", { name: "Activity" }));
-    expect(within(nav).getByRole("button", { name: "Activity" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    await openTab(user, "Paseos");
     expect(await screen.findByRole("heading", { name: "Activity" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Coming soon" })).not.toBeInTheDocument();
   });
 
-  it("shows the walker inbox on the Requests tab (S1)", async () => {
+  it("shows the walker inbox on the Solicitudes tab (S1)", async () => {
     mockGetSession.mockResolvedValue({ data: walkerSession() });
     mockFetchRoutes.mockResolvedValue([]);
 
@@ -296,17 +304,12 @@ describe("App shell — S0 role-based bottom navigation", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const nav = await screen.findByRole("navigation", { name: "Main" });
-    await user.click(within(nav).getByRole("button", { name: "Requests" }));
-    expect(within(nav).getByRole("button", { name: "Requests" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    await openTab(user, "Solicitudes");
     expect(await screen.findByRole("heading", { name: "Requests" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Coming soon" })).not.toBeInTheDocument();
   });
 
-  it("shows the walker profile form on the Profile tab (S1)", async () => {
+  it("shows the walker profile form on the Perfil tab (S1)", async () => {
     mockGetSession.mockResolvedValue({ data: walkerSession() });
     mockFetchRoutes.mockResolvedValue([]);
 
@@ -314,34 +317,32 @@ describe("App shell — S0 role-based bottom navigation", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const nav = await screen.findByRole("navigation", { name: "Main" });
-    await user.click(within(nav).getByRole("button", { name: "Profile" }));
+    await openTab(user, "Perfil");
     expect(await screen.findByLabelText("Display name")).toBeInTheDocument();
   });
 
-  it("shows walker discovery on the owner's Discover tab (S1)", async () => {
+  it("shows walker discovery on the owner's Explorar tab (S1)", async () => {
     mockGetSession.mockResolvedValue({ data: ownerSession() });
 
     const { App } = await importApp();
     const user = userEvent.setup();
     render(<App />);
 
-    const nav = await screen.findByRole("navigation", { name: "Main" });
-    await user.click(within(nav).getByRole("button", { name: "Discover" }));
+    await openTab(user, "Explorar");
     expect(await screen.findByRole("heading", { name: "Find a walker" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "My requests" })).toBeInTheDocument();
   });
 
-  it("shows the pickup-plan panel on the walker's Today tab (S2)", async () => {
+  it("shows the pickup-plan panel on the walker's Rutas tab (S2)", async () => {
     mockGetSession.mockResolvedValue({ data: walkerSession() });
     mockFetchRoutes.mockResolvedValue([]);
 
     const { App } = await importApp();
+    const user = userEvent.setup();
     render(<App />);
 
-    expect(
-      await screen.findByRole("button", { name: "Suggest order" }),
-    ).toBeInTheDocument();
+    await openTab(user, "Rutas");
+    expect(await screen.findByRole("button", { name: "Suggest order" })).toBeInTheDocument();
   });
 
   it("titles route cards with the first dog and the formatted time, not the UUID (S2)", async () => {
@@ -357,8 +358,10 @@ describe("App shell — S0 role-based bottom navigation", () => {
     ]);
 
     const { App } = await importApp();
+    const user = userEvent.setup();
     render(<App />);
 
+    await openTab(user, "Rutas");
     const formatted = new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
       timeStyle: "short",
@@ -373,7 +376,7 @@ describe("App shell — S0 role-based bottom navigation", () => {
   it("loads the design tokens stylesheet from the app entry", async () => {
     const { readFileSync } = await import("node:fs");
     // One of the entry modules must import the kit tokens so they actually
-    // load in the browser; PR 2 could otherwise create the file and never use it.
+    // load in the browser.
     const entry = `${readFileSync("apps/web/src/main.tsx", "utf8")}\n${readFileSync(
       "apps/web/src/App.tsx",
       "utf8",
