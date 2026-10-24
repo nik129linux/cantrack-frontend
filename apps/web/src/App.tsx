@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import {
-  LoginScreen,
-  ResetPasswordScreen,
-  SignupScreen,
-} from "./auth/AuthScreens.js";
+import { AuthShell } from "./auth/AuthShell.js";
+import { PENDING_ROLE_KEY } from "./auth/SocialAuth.js";
 import { OwnerActivityScreen } from "./owner/OwnerActivityScreen.js";
 import { OwnerDiscoverScreen } from "./owner/OwnerDiscoverScreen.js";
 import { OwnerDogsScreen } from "./owner/OwnerDogsScreen.js";
@@ -15,18 +12,17 @@ import { WalkerProfileScreen } from "./walker/WalkerProfileScreen.js";
 import { WalkerRouteScreen } from "./walker/WalkerRouteScreen.js";
 import { fetchRoutes, type Route } from "./lib/api.js";
 import { formatWhen } from "./lib/format.js";
+import { readPreviewSession } from "./lib/preview.js";
 import { supabase } from "./lib/supabase.js";
 import { Banner } from "./ui/Banner.js";
-import { BottomNav } from "./ui/BottomNav.js";
+import { DogLoader } from "./ui/DogLoader.js";
+import { HomeShell } from "./home/HomeDashboard.js";
 import { Button } from "./ui/Button.js";
 import { EmptyState } from "./ui/EmptyState.js";
 import { ListRow } from "./ui/ListRow.js";
-import { Pill } from "./ui/Pill.js";
 import { ClockIcon } from "./ui/icons.js";
 import "./ui/tokens.css";
 import "./app-shell.css";
-
-type AuthView = "signup" | "login" | "reset";
 
 const routeTintNames = ["mint", "peach", "butter", "sky", "sage"] as const;
 
@@ -67,36 +63,6 @@ function useAppShellMount() {
   }, []);
 
   return shellRef;
-}
-
-function AuthShell() {
-  const [view, setView] = useState<AuthView>("signup");
-
-  return (
-    <div className="app-shell__panel app-shell__panel--auth auth-panel auth-panel--mint">
-      <header className="app-shell__brand">
-        <span className="app-shell__brand-mark" aria-hidden="true">C</span>
-        <div>
-          <p className="app-shell__eyebrow">Neighbourhood walks</p>
-          <h1 className="app-shell__brand-name">CanTrack</h1>
-        </div>
-      </header>
-      <nav className="auth-switcher" aria-label="Account access">
-        <Pill active={view === "signup"} onClick={() => setView("signup")}>
-          Sign up
-        </Pill>
-        <Pill active={view === "login"} onClick={() => setView("login")}>
-          Log in
-        </Pill>
-        <Pill active={view === "reset"} onClick={() => setView("reset")}>
-          Reset
-        </Pill>
-      </nav>
-      {view === "signup" ? <SignupScreen /> : null}
-      {view === "login" ? <LoginScreen /> : null}
-      {view === "reset" ? <ResetPasswordScreen /> : null}
-    </div>
-  );
 }
 
 function RouteList({ onOpen }: { onOpen: (route: Route) => void }) {
@@ -212,44 +178,57 @@ function ComingSoon({ section }: { section: string }) {
   );
 }
 
-function WalkerShell({ userId }: { userId: string }) {
-  const [tab, setTab] = useState("Today");
-
+function WalkerShell({ userId, onLogout }: { userId: string; onLogout: () => void }) {
   return (
-    <div className="app-shell__content">
-      <div className="app-shell__panel app-shell__panel--routes">
-        {tab === "Today" ? <WalkerDashboard /> : null}
-        {tab === "Requests" ? <WalkerInboxScreen /> : null}
-        {tab === "Profile" ? <WalkerProfileScreen userId={userId} /> : null}
-        {tab === "Clients" ? <WalkerClientsScreen /> : null}
-      </div>
-      <BottomNav role="walker" active={tab} onNavigate={setTab} />
-    </div>
+    <HomeShell
+      role="walker"
+      onLogout={onLogout}
+      screens={{
+        requests: <WalkerInboxScreen />,
+        clients: <WalkerClientsScreen />,
+        routes: <WalkerDashboard />,
+        profile: <WalkerProfileScreen userId={userId} />,
+      }}
+    />
   );
 }
 
-function OwnerShell() {
-  const [tab, setTab] = useState("My dogs");
-
+function OwnerShell({ onLogout }: { onLogout: () => void }) {
   return (
-    <div className="app-shell__content">
-      <div className="app-shell__panel app-shell__panel--owner">
-        {tab === "My dogs" ? <OwnerDogsScreen /> : null}
-        {tab === "Discover" ? <OwnerDiscoverScreen /> : null}
-        {tab === "Activity" ? <OwnerActivityScreen /> : null}
-        {tab === "Profile" ? <ComingSoon section={tab} /> : null}
-      </div>
-      <BottomNav role="owner" active={tab} onNavigate={setTab} />
-    </div>
+    <HomeShell
+      role="owner"
+      onLogout={onLogout}
+      screens={{
+        explore: <OwnerDiscoverScreen />,
+        dogs: <OwnerDogsScreen />,
+        walks: <OwnerActivityScreen />,
+        profile: <ComingSoon section="Profile" />,
+      }}
+    />
   );
+}
+
+/** Role chosen on the signup form before a Google/Apple redirect, if any. */
+function readPendingRole(): "owner" | "walker" | null {
+  try {
+    const stored = window.localStorage.getItem(PENDING_ROLE_KEY);
+    return stored === "owner" || stored === "walker" ? stored : null;
+  } catch {
+    return null;
+  }
 }
 
 export function App() {
-  const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [preview] = useState(() => readPreviewSession());
+  const [session, setSession] = useState<Session | null | undefined>(preview ?? undefined);
   const [authError, setAuthError] = useState<string | null>(null);
   const shellRef = useAppShellMount();
 
   useEffect(() => {
+    if (preview !== null) {
+      return;
+    }
+
     let isMounted = true;
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (isMounted) {
@@ -280,30 +259,50 @@ export function App() {
       isMounted = false;
       data.subscription.unsubscribe();
     };
-  }, []);
+  }, [preview]);
+
+  // An OAuth signup arrives without a role; apply the one picked before the redirect.
+  useEffect(() => {
+    if (session === null || session === undefined) {
+      return;
+    }
+    const metadataRole = session.user.user_metadata.role;
+    if (metadataRole === "owner" || metadataRole === "walker") {
+      return;
+    }
+    const pendingRole = readPendingRole();
+    if (pendingRole === null) {
+      return;
+    }
+    void supabase.auth
+      .updateUser({ data: { role: pendingRole } })
+      .then(() => window.localStorage.removeItem(PENDING_ROLE_KEY))
+      .catch(() => undefined);
+  }, [session]);
 
   if (session === undefined) {
     return (
       <div ref={shellRef} className="app-shell app-shell--centered" data-cantrack-app-shell>
-        <div className="app-shell__panel app-shell__status" role="status">
-          Loading CanTrack...
-        </div>
+        <DogLoader label="Cargando CanTrack…" />
       </div>
     );
   }
 
   const role = session?.user.user_metadata.role;
   const userId = session?.user.id ?? "";
+  const hasKnownRole = role === "owner" || role === "walker";
+  const logout = () =>
+    preview !== null ? window.location.assign(window.location.pathname) : void supabase.auth.signOut();
 
   return (
     <div ref={shellRef} className="app-shell" data-cantrack-app-shell>
-      {session !== null ? (
+      {session !== null && !hasKnownRole ? (
         <div className="app-shell__topbar">
           <span className="app-shell__eyebrow">CanTrack</span>
           <Button
             className="app-shell__logout"
             variant="ghost"
-            onClick={() => void supabase.auth.signOut()}
+            onClick={logout}
           >
             Log out
           </Button>
@@ -311,9 +310,9 @@ export function App() {
       ) : null}
       {authError !== null ? <p className="app-shell__alert" role="alert">{authError}</p> : null}
       {session === null ? <AuthShell /> : null}
-      {role === "owner" ? <OwnerShell /> : null}
-      {role === "walker" ? <WalkerShell userId={userId} /> : null}
-      {session !== null && role !== "owner" && role !== "walker" ? (
+      {role === "owner" ? <OwnerShell onLogout={logout} /> : null}
+      {role === "walker" ? <WalkerShell userId={userId} onLogout={logout} /> : null}
+      {session !== null && !hasKnownRole ? (
         <div className="app-shell__panel app-shell__status" role="alert">
           This account does not have a walker or owner role.
         </div>
