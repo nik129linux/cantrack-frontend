@@ -248,7 +248,8 @@ export type RequestStatus = "pending" | "accepted" | "declined" | "cancelled";
 /** The full request as its owner sees it. */
 export type OwnerRequestView = {
   id: string;
-  walkerId: string;
+  /** Null while an open offer has no walker yet. */
+  walkerId: string | null;
   walkerName: string | null;
   dogId: string;
   dogName: string | null;
@@ -375,6 +376,51 @@ export function declineRequest(requestId: string): Promise<DeclineRequestResult>
 export function cancelRequest(requestId: string): Promise<CancelRequestResult> {
   return request<CancelRequestResult>(
     `/requests/${encodeURIComponent(requestId)}/cancel`,
+    { method: "POST" },
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Open offers: the owner proposes a price, any walker may accept      */
+/* ------------------------------------------------------------------ */
+
+export type OpenOfferInput = {
+  dogId: string;
+  requestedTime: string;
+  pickupLat: number;
+  pickupLng: number;
+  priceCop: number;
+};
+
+export function createOpenOffer(input: OpenOfferInput): Promise<OwnerRequestView> {
+  return request<OwnerRequestView>("/open-requests", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function raiseOfferPrice(requestId: string, priceCop: number): Promise<OwnerRequestView> {
+  return request<OwnerRequestView>(
+    `/open-requests/${encodeURIComponent(requestId)}/price`,
+    { method: "PATCH", body: JSON.stringify({ priceCop }) },
+  );
+}
+
+/** The pending open offers a walker can still answer (limited dog view, no pin). */
+export function fetchOpenOffers(): Promise<WalkerRequestView[]> {
+  return request<WalkerRequestView[]>("/open-requests");
+}
+
+export function acceptOpenOffer(requestId: string): Promise<AcceptRequestResult> {
+  return request<AcceptRequestResult>(
+    `/open-requests/${encodeURIComponent(requestId)}/accept`,
+    { method: "POST" },
+  );
+}
+
+export function declineOpenOffer(requestId: string): Promise<{ id: string; declined: boolean }> {
+  return request<{ id: string; declined: boolean }>(
+    `/open-requests/${encodeURIComponent(requestId)}/decline`,
     { method: "POST" },
   );
 }

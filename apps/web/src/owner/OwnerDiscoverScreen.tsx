@@ -16,6 +16,7 @@ import { EmptyState } from "../ui/EmptyState.js";
 import { ListRow } from "../ui/ListRow.js";
 import { Toast } from "../ui/Toast.js";
 import { PersonIcon } from "../ui/icons.js";
+import { PickupMap } from "../map/PickupMap.js";
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "message" in error) {
@@ -180,6 +181,15 @@ export function OwnerDiscoverScreen() {
   return (
     <div className="discover-screen">
       <Banner title="Find a walker" subtitle="Browse profiles and request a walk." tint="mint" />
+
+      <PickupMap
+        lat={lat}
+        lng={lng}
+        onPick={(pickedLat, pickedLng) => {
+          setLat(String(pickedLat));
+          setLng(String(pickedLng));
+        }}
+      />
 
       {walkersError !== null ? <Toast tone="error" message={walkersError} /> : null}
       {isLoadingWalkers ? <p className="app-shell__status">Loading walkers...</p> : null}

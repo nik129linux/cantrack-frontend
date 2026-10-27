@@ -3,10 +3,11 @@ import type { Session } from "@supabase/supabase-js";
 import { AuthShell } from "./auth/AuthShell.js";
 import { PENDING_ROLE_KEY } from "./auth/SocialAuth.js";
 import { OwnerActivityScreen } from "./owner/OwnerActivityScreen.js";
-import { OwnerDiscoverScreen } from "./owner/OwnerDiscoverScreen.js";
+import { OwnerExploreScreen } from "./owner/OwnerExploreScreen.js";
 import { OwnerDogsScreen } from "./owner/OwnerDogsScreen.js";
 import { WalkerClientsScreen } from "./walker/WalkerClientsScreen.js";
 import { WalkerInboxScreen } from "./walker/WalkerInboxScreen.js";
+import { WalkerOffersScreen } from "./walker/WalkerOffersScreen.js";
 import { WalkerPlanPanel } from "./walker/WalkerPlanPanel.js";
 import { WalkerProfileScreen } from "./walker/WalkerProfileScreen.js";
 import { WalkerRouteScreen } from "./walker/WalkerRouteScreen.js";
@@ -184,7 +185,12 @@ function WalkerShell({ userId, onLogout }: { userId: string; onLogout: () => voi
       role="walker"
       onLogout={onLogout}
       screens={{
-        requests: <WalkerInboxScreen />,
+        requests: (
+          <>
+            <WalkerOffersScreen />
+            <WalkerInboxScreen />
+          </>
+        ),
         clients: <WalkerClientsScreen />,
         routes: <WalkerDashboard />,
         profile: <WalkerProfileScreen userId={userId} />,
@@ -199,7 +205,7 @@ function OwnerShell({ onLogout }: { onLogout: () => void }) {
       role="owner"
       onLogout={onLogout}
       screens={{
-        explore: <OwnerDiscoverScreen />,
+        explore: <OwnerExploreScreen />,
         dogs: <OwnerDogsScreen />,
         walks: <OwnerActivityScreen />,
         profile: <ComingSoon section="Profile" />,

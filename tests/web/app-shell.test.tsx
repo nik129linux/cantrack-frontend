@@ -47,6 +47,13 @@ vi.mock("../../apps/web/src/lib/api.js", () => ({
   fetchAiQuota: vi.fn().mockResolvedValue({ used: 0, limit: 60, resetsAt: "" }),
   fetchCheckouts: vi.fn().mockResolvedValue([]),
   fetchTimeline: vi.fn().mockResolvedValue([]),
+  createOpenOffer: vi.fn().mockResolvedValue(null),
+  raiseOfferPrice: vi.fn().mockResolvedValue(null),
+  fetchOpenOffers: vi.fn().mockResolvedValue([]),
+  acceptOpenOffer: vi.fn().mockResolvedValue(null),
+  declineOpenOffer: vi.fn().mockResolvedValue(null),
+  cancelRequest: vi.fn().mockResolvedValue(null),
+  createRequest: vi.fn().mockResolvedValue(null),
 }));
 
 async function importApp() {
@@ -305,6 +312,7 @@ describe("App shell — glass navigation", () => {
     render(<App />);
 
     await openTab(user, "Solicitudes");
+    expect(await screen.findByRole("heading", { name: "Ofertas de paseo" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Requests" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Coming soon" })).not.toBeInTheDocument();
   });
@@ -329,8 +337,8 @@ describe("App shell — glass navigation", () => {
     render(<App />);
 
     await openTab(user, "Explorar");
-    expect(await screen.findByRole("heading", { name: "Find a walker" })).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "My requests" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Explorar", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Mis ofertas" })).toBeInTheDocument();
   });
 
   it("shows the pickup-plan panel on the walker's Rutas tab (S2)", async () => {
