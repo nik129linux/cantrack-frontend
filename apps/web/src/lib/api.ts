@@ -59,10 +59,26 @@ export type UndoCheckInResult = {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
-type RequestOptions = {
+export type RequestOptions = {
   method?: string;
   body?: string | FormData;
+  headers?: Record<string, string>;
+  /** Skip the Authorization header (login and signup have no session yet). */
+  anonymous?: boolean;
 };
+
+/** An API failure with what the screens need: status, Retry-After and errorId. */
+export class ApiError extends Error {
+  status: number;
+  retryAfter: number | null = null;
+  errorId: string | null = null;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
 
 /**
  * One validation problem out of a FastAPI `{"detail": [...]}` list, e.g.
@@ -123,9 +139,19 @@ async function toRequestError(response: Response): Promise<Error> {
   return new Error(text);
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+/** Read the `errorId` a 5xx carries (`{"detail", "errorId"}`), if any. */
+function readErrorId(text: string): string | null {
+  try {
+    const payload = JSON.parse(text) as { errorId?: unknown };
+    return typeof payload.errorId === "string" ? payload.errorId : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function rawRequest(path: string, options: RequestOptions = {}): Promise<Response> {
   const { data } = await supabase.auth.getSession();
-  const headers = new Headers();
+  const headers = new Headers(options.headers);
 
   // A FormData body must not carry a Content-Type: the browser adds the
   // multipart boundary itself.
@@ -133,7 +159,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers.set("Content-Type", "application/json");
   }
 
-  if (data.session?.access_token !== undefined) {
+  if (options.anonymous !== true && data.session?.access_token !== undefined) {
     headers.set("Authorization", `Bearer ${data.session.access_token}`);
   }
 
@@ -143,15 +169,28 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     body: options.body,
   });
 
-  if (!response.ok) {
-    const error = await toRequestError(response);
+  // 304 is a normal answer for ETag polling; callers inspect `status` themselves.
+  if (!response.ok && response.status !== 304) {
+    const text = await response.clone().text();
+    const base = await toRequestError(response);
     // Callers that need the status (e.g. fetchRequestCheckout mapping the
     // "no checkout yet" 404 to null) read it from the Error; the message —
     // what every existing caller asserts — is untouched.
-    (error as Error & { status?: number }).status = response.status;
+    const error = new ApiError(base.message, response.status);
+    const retry = Number(response.headers.get("Retry-After"));
+    error.retryAfter = Number.isFinite(retry) && retry > 0 ? retry : null;
+    error.errorId = readErrorId(text);
     throw error;
   }
 
+  return response;
+}
+
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const response = await rawRequest(path, options);
+  if (response.status === 204) {
+    return undefined as T;
+  }
   return response.json() as Promise<T>;
 }
 

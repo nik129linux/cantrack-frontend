@@ -10,14 +10,12 @@ import userEvent from "@testing-library/user-event";
 
 const mockSignUp = vi.fn();
 
-vi.mock("../../apps/web/src/lib/supabase.js", () => ({
-  supabase: {
-    auth: {
-      signUp: mockSignUp,
-      signInWithPassword: vi.fn(),
-      resetPasswordForEmail: vi.fn(),
-    },
-  },
+vi.mock("../../apps/web/src/lib/supabase.js", () => ({ supabase: { auth: {} } }));
+vi.mock("../../apps/web/src/lib/marketplace.js", () => ({
+  signupAccount: mockSignUp,
+  loginAccount: vi.fn(),
+  requestPasswordReset: vi.fn(),
+  resendVerification: vi.fn(),
 }));
 
 async function importScreens() {
@@ -42,17 +40,14 @@ describe("Data-protection consent at sign up (Issue #23, Ley 1581)", () => {
 
   it("blocks sign up when the consent checkbox is not checked", async () => {
     const { SignupScreen } = await importScreens();
-    mockSignUp.mockResolvedValueOnce({
-      data: { user: { id: "user-1", email: "walker@example.com" } },
-      error: null,
-    });
+    mockSignUp.mockResolvedValueOnce({ user: { id: "user-1" }, session: null });
 
     const user = userEvent.setup();
     render(<SignupScreen />);
 
     await user.type(screen.getByLabelText(/correo electrónico/i), "walker@example.com");
     await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
-    await user.click(screen.getByLabelText(/cuidador/i));
+    await user.click(screen.getByLabelText(/paseador/i));
     // Do NOT check the consent checkbox
     await user.click(screen.getByRole("button", { name: /crear cuenta/i }));
 
@@ -64,17 +59,14 @@ describe("Data-protection consent at sign up (Issue #23, Ley 1581)", () => {
 
   it("allows sign up when the consent checkbox IS checked", async () => {
     const { SignupScreen } = await importScreens();
-    mockSignUp.mockResolvedValueOnce({
-      data: { user: { id: "user-1", email: "walker@example.com" } },
-      error: null,
-    });
+    mockSignUp.mockResolvedValueOnce({ user: { id: "user-1" }, session: null });
 
     const user = userEvent.setup();
     render(<SignupScreen />);
 
     await user.type(screen.getByLabelText(/correo electrónico/i), "walker@example.com");
     await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
-    await user.click(screen.getByLabelText(/cuidador/i));
+    await user.click(screen.getByLabelText(/paseador/i));
     // Check the consent checkbox
     await user.click(screen.getByLabelText(/data protection|personal data|tratamiento de datos/i));
     await user.click(screen.getByRole("button", { name: /crear cuenta/i }));

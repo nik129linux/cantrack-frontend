@@ -1,4 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ApiError } from "../lib/api.js";
+import {
+  loginAccount,
+  requestPasswordReset,
+  resendVerification,
+  signupAccount,
+} from "../lib/marketplace.js";
 import { supabase } from "../lib/supabase.js";
 import { Button } from "../ui/Button.js";
 import { AuthField } from "./AuthField.js";
@@ -9,14 +16,12 @@ import {
   ClockIcon,
   LockIcon,
   MailIcon,
-  PhoneIcon,
   PinIcon,
   RouteIcon,
   ShieldIcon,
-  UserIcon,
   WalletIcon,
 } from "./icons.js";
-import { authCopy, translateAuthError } from "./messages.js";
+import { authCopy, translateApiAuthError, translateAuthError } from "./messages.js";
 import { SocialAuth } from "./SocialAuth.js";
 
 function useAuthScreenMount() {
@@ -143,10 +148,55 @@ export function RoleScreen() {
   );
 }
 
+export const PENDING_CONSENT_KEY = "cantrack.pendingConsent";
+
+/** Spanish copy for a failed call: the API's status rules, or Supabase's message. */
+function apiAuthError(error: unknown, fallback: string): string {
+  return error instanceof ApiError
+    ? translateApiAuthError(error, fallback)
+    : translateAuthError(error, fallback);
+}
+
+/** "Reenviar link", disabled for 60 s after every tap (the API allows 3 a minute). */
+function ResendLink({ email }: { email: string }) {
+  const [wait, setWait] = useState(0);
+  const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    if (wait <= 0) {
+      return;
+    }
+    const id = window.setTimeout(() => setWait((value) => value - 1), 1000);
+    return () => window.clearTimeout(id);
+  }, [wait]);
+
+  async function resend() {
+    setWait(60);
+    try {
+      await resendVerification(email);
+      setSent(true);
+    } catch {
+      setSent(false);
+    }
+  }
+
+  return (
+    <p className="auth-card__aside">
+      <button
+        type="button"
+        className="auth-link"
+        disabled={wait > 0 || email.length === 0}
+        onClick={() => void resend()}
+      >
+        {wait > 0 ? `${authCopy.verify.resend} (${wait} s)` : authCopy.verify.resend}
+      </button>
+      {sent ? <span role="status"> {authCopy.verify.resent}</span> : null}
+    </p>
+  );
+}
+
 export function SignupScreen() {
-  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [pickedRole, setPickedRole] = useState<UserRole>("walker");
   const [hasConsent, setHasConsent] = useState(false);
@@ -186,26 +236,17 @@ export function SignupScreen() {
     setIsSubmitting(true);
     setMood("submitting");
     try {
-      const response = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            role,
-            ...(fullName.trim().length > 0 ? { full_name: fullName.trim() } : {}),
-            ...(phone.trim().length > 0 ? { phone: phone.trim() } : {}),
-          },
-        },
-      });
-
-      if (response.error !== null) {
-        fail(translateAuthError(response.error, authCopy.errors.signup));
-      } else {
-        setIsDone(true);
-        setMood("success");
+      await signupAccount({ email: email.trim(), password, role });
+      try {
+        // Consent is recorded once the first session exists (see App).
+        window.localStorage.setItem(PENDING_CONSENT_KEY, "1");
+      } catch {
+        // Storage can be blocked; Perfil asks for the consent again.
       }
+      setIsDone(true);
+      setMood("success");
     } catch (submissionError) {
-      fail(translateAuthError(submissionError, authCopy.errors.signup));
+      fail(apiAuthError(submissionError, authCopy.errors.signup));
     } finally {
       setIsSubmitting(false);
     }
@@ -225,17 +266,6 @@ export function SignupScreen() {
       <ScreenHeading title={authCopy.signup.title} subtitle={authCopy.signup.subtitle} />
       <form onSubmit={handleSubmit} noValidate>
         <AuthField
-          id="signup-name"
-          name="name"
-          label={authCopy.fields.name}
-          icon={<UserIcon />}
-          autoComplete="name"
-          value={fullName}
-          onChange={setFullName}
-          onFocus={() => setMood("email")}
-          onBlur={() => setMood("idle")}
-        />
-        <AuthField
           id="signup-email"
           name="email"
           label={authCopy.fields.email}
@@ -244,18 +274,6 @@ export function SignupScreen() {
           autoComplete="email"
           value={email}
           onChange={setEmail}
-          onFocus={() => setMood("email")}
-          onBlur={() => setMood("idle")}
-        />
-        <AuthField
-          id="signup-phone"
-          name="phone"
-          label={authCopy.fields.phone}
-          icon={<PhoneIcon />}
-          type="tel"
-          autoComplete="tel"
-          value={phone}
-          onChange={setPhone}
           onFocus={() => setMood("email")}
           onBlur={() => setMood("idle")}
         />
@@ -271,6 +289,7 @@ export function SignupScreen() {
           onFocus={() => setMood("password")}
           onBlur={() => setMood("idle")}
         />
+        <p className="auth-card__hint">{authCopy.signup.passwordTip}</p>
         {flowRole === undefined && (
           <fieldset className="role-picker">
             <legend>{authCopy.fields.role}</legend>
@@ -327,7 +346,12 @@ export function SignupScreen() {
         </Button>
       </form>
       {error !== null && <p className="auth-card__message auth-card__message--error" role="alert">{error}</p>}
-      {isDone && <p className="auth-card__message" role="status">{authCopy.signup.done}</p>}
+      {isDone && (
+        <>
+          <p className="auth-card__message" role="status">{authCopy.signup.done}</p>
+          <ResendLink email={email.trim()} />
+        </>
+      )}
       <SocialAuth divider={authCopy.signup.divider} role={role} onError={fail} />
       <SwitchLine
         prompt={authCopy.signup.haveAccount}
@@ -343,6 +367,8 @@ export function LoginScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [lockedUntil, setLockedUntil] = useState(0);
   const screenRef = useAuthScreenMount();
   const { setMood, navigate } = useAuthMood();
 
@@ -354,6 +380,7 @@ export function LoginScreen() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setNeedsVerification(false);
 
     if (email.trim().length === 0) {
       fail(authCopy.errors.emailRequired);
@@ -368,18 +395,20 @@ export function LoginScreen() {
     setIsSubmitting(true);
     setMood("submitting");
     try {
-      const response = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+      const session = await loginAccount(email.trim(), password);
+      await supabase.auth.setSession({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
       });
-
-      if (response.error !== null) {
-        fail(translateAuthError(response.error, authCopy.errors.login));
-      } else {
-        setMood("success");
-      }
+      setMood("success");
     } catch (submissionError) {
-      fail(translateAuthError(submissionError, authCopy.errors.login));
+      if (submissionError instanceof ApiError) {
+        setNeedsVerification(submissionError.status === 403);
+        if (submissionError.status === 429) {
+          setLockedUntil(Date.now() + (submissionError.retryAfter ?? 900) * 1000);
+        }
+      }
+      fail(apiAuthError(submissionError, authCopy.errors.login));
     } finally {
       setIsSubmitting(false);
     }
@@ -418,11 +447,12 @@ export function LoginScreen() {
             {authCopy.login.forgot}
           </button>
         </p>
-        <Button type="submit" className="auth-submit" disabled={isSubmitting}>
+        <Button type="submit" className="auth-submit" disabled={isSubmitting || lockedUntil > Date.now()}>
           {isSubmitting ? authCopy.login.submitting : authCopy.login.submit}
         </Button>
       </form>
       {error !== null && <p className="auth-card__message auth-card__message--error" role="alert">{error}</p>}
+      {needsVerification && <ResendLink email={email.trim()} />}
       <SocialAuth divider={authCopy.login.divider} onError={fail} />
       <SwitchLine
         prompt={authCopy.login.noAccount}
@@ -459,18 +489,11 @@ export function ResetPasswordScreen() {
     setIsSubmitting(true);
     setMood("submitting");
     try {
-      const response = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (response.error !== null) {
-        fail(translateAuthError(response.error, authCopy.errors.reset));
-      } else {
-        setIsSent(true);
-        setMood("success");
-      }
+      await requestPasswordReset(email.trim());
+      setIsSent(true);
+      setMood("success");
     } catch (submissionError) {
-      fail(translateAuthError(submissionError, authCopy.errors.reset));
+      fail(apiAuthError(submissionError, authCopy.errors.reset));
     } finally {
       setIsSubmitting(false);
     }

@@ -11,16 +11,21 @@ export const authCopy = {
       perks: ["Paseo en vivo", "Fotos del paseo", "Pago seguro"],
     },
     walker: {
-      title: "Soy cuidador",
+      title: "Soy paseador",
       text: "Pasea perros cerca de ti y organiza tu día.",
       perks: ["Tu propio horario", "Rutas inteligentes", "Pagos semanales"],
     },
     next: "Continuar",
     haveAccount: "¿Ya tienes cuenta?",
     goLogin: "Ingresa",
-    chip: { owner: "Dueño", walker: "Cuidador" },
+    chip: { owner: "Dueño", walker: "Paseador" },
     change: "Cambiar",
     registeringAs: "Te registras como",
+  },
+  verify: {
+    resend: "Reenviar link",
+    resent: "Si la cuenta existe, te enviamos un nuevo link.",
+    activated: "¡Cuenta activada!",
   },
   loading: {
     signup: "Creando tu cuenta…",
@@ -37,7 +42,8 @@ export const authCopy = {
     consent: "Acepto el tratamiento de datos personales y los términos de uso",
     haveAccount: "¿Ya tienes cuenta?",
     goLogin: "Ingresa",
-    done: "¡Listo! Revisa tu correo para confirmar la cuenta.",
+    done: "Revisa tu correo: te enviamos un link para activar la cuenta.",
+    passwordTip: "Tip: una frase larga es más segura que una palabra rara",
   },
   login: {
     title: "Qué bueno verte de nuevo",
@@ -58,14 +64,12 @@ export const authCopy = {
     sent: "Revisa tu correo: te enviamos un enlace para restablecer tu contraseña.",
   },
   fields: {
-    name: "Nombre (opcional)",
-    phone: "Teléfono (opcional)",
     email: "Correo electrónico",
     password: "Contraseña",
     showPassword: "Mostrar clave",
     hidePassword: "Ocultar clave",
     role: "Soy…",
-    walker: "Cuidador",
+    walker: "Paseador",
     owner: "Dueño",
   },
   errors: {
@@ -98,6 +102,37 @@ export function translateAuthError(error: unknown, fallback: string): string {
           return spanish;
         }
       }
+    }
+  }
+  return fallback;
+}
+
+/** Status-aware copy for the /auth endpoints (login, signup, password rules). */
+export function translateApiAuthError(
+  error: { status: number; message: string },
+  fallback: string,
+): string {
+  if (error.status === 401) {
+    return "Correo o contraseña incorrectos.";
+  }
+  if (error.status === 403) {
+    return "Primero confirma tu correo.";
+  }
+  if (error.status === 429) {
+    return "Demasiados intentos. Intenta de nuevo en 15 minutos.";
+  }
+  if (/already registered|already been registered/i.test(error.message)) {
+    return "Ese correo ya tiene una cuenta.";
+  }
+  if (error.status === 400) {
+    if (/10 characters|too short|at least 10/i.test(error.message)) {
+      return "Usa al menos 10 caracteres (una frase sirve)";
+    }
+    if (/common/i.test(error.message)) {
+      return "Esa contraseña es muy común";
+    }
+    if (/email/i.test(error.message)) {
+      return "No uses tu correo dentro de la contraseña";
     }
   }
   return fallback;

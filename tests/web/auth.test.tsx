@@ -10,19 +10,27 @@ import userEvent from "@testing-library/user-event";
 // path this mock targets); see AGENTS.md.
 
 const mockSignUp = vi.fn();
-const mockSignInWithPassword = vi.fn();
-const mockResetPasswordForEmail = vi.fn();
+const mockLogin = vi.fn();
+const mockResetPassword = vi.fn();
+const mockResend = vi.fn();
+const mockSetSession = vi.fn();
 const mockSignInWithOAuth = vi.fn();
 
+// Signup, login and reset go through the API; supabase-js only keeps the session.
 vi.mock("../../apps/web/src/lib/supabase.js", () => ({
   supabase: {
     auth: {
-      signUp: mockSignUp,
-      signInWithPassword: mockSignInWithPassword,
-      resetPasswordForEmail: mockResetPasswordForEmail,
+      setSession: mockSetSession,
       signInWithOAuth: mockSignInWithOAuth,
     },
   },
+}));
+
+vi.mock("../../apps/web/src/lib/marketplace.js", () => ({
+  signupAccount: mockSignUp,
+  loginAccount: mockLogin,
+  requestPasswordReset: mockResetPassword,
+  resendVerification: mockResend,
 }));
 
 async function importScreens() {
@@ -32,40 +40,40 @@ async function importScreens() {
 describe("Auth screens (FR-01, FR-02, FR-03)", () => {
   beforeEach(() => {
     mockSignUp.mockReset();
-    mockSignInWithPassword.mockReset();
-    mockResetPasswordForEmail.mockReset();
+    mockLogin.mockReset();
+    mockResetPassword.mockReset();
+    mockResend.mockReset();
+    mockSetSession.mockReset();
     mockSignInWithOAuth.mockReset();
   });
 
   it("signs up as a walker with the role field submitted", async () => {
     const { SignupScreen } = await importScreens();
-    mockSignUp.mockResolvedValueOnce({
-      data: { user: { id: "user-1", email: "walker@example.com" } },
-      error: null,
-    });
+    mockSignUp.mockResolvedValueOnce({ user: { id: "user-1" }, session: null });
 
     const user = userEvent.setup();
     render(<SignupScreen />);
 
     await user.type(screen.getByLabelText(/correo electrónico/i), "walker@example.com");
     await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
-    await user.click(screen.getByLabelText(/cuidador/i));
+    await user.click(screen.getByLabelText(/paseador/i));
     await user.click(screen.getByLabelText(/tratamiento de datos/i));
     await user.click(screen.getByRole("button", { name: /crear cuenta/i }));
 
     await waitFor(() => {
-      expect(mockSignUp).toHaveBeenCalledWith(
-        expect.objectContaining({ email: "walker@example.com" }),
-      );
+      expect(mockSignUp).toHaveBeenCalledWith({
+        email: "walker@example.com",
+        password: "correct horse battery staple",
+        role: "walker",
+      });
     });
+    expect(await screen.findByText(/revisa tu correo/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /reenviar link/i })).toBeInTheDocument();
   });
 
   it("signs up as an owner with the role field submitted", async () => {
     const { SignupScreen } = await importScreens();
-    mockSignUp.mockResolvedValueOnce({
-      data: { user: { id: "user-2", email: "owner@example.com" } },
-      error: null,
-    });
+    mockSignUp.mockResolvedValueOnce({ user: { id: "user-2" }, session: null });
 
     const user = userEvent.setup();
     render(<SignupScreen />);
@@ -85,7 +93,7 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
     render(<SignupScreen />);
 
     await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
-    await user.click(screen.getByLabelText(/cuidador/i));
+    await user.click(screen.getByLabelText(/paseador/i));
     await user.click(screen.getByLabelText(/tratamiento de datos/i));
     await user.click(screen.getByRole("button", { name: /crear cuenta/i }));
 
@@ -95,17 +103,15 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
 
   it("shows the Supabase error message when signup fails", async () => {
     const { SignupScreen } = await importScreens();
-    mockSignUp.mockResolvedValueOnce({
-      data: { user: null },
-      error: { message: "User already registered" },
-    });
+    const { ApiError } = await import("../../apps/web/src/lib/api.js");
+    mockSignUp.mockRejectedValueOnce(new ApiError("User already registered", 400));
 
     const user = userEvent.setup();
     render(<SignupScreen />);
 
     await user.type(screen.getByLabelText(/correo electrónico/i), "dup@example.com");
     await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
-    await user.click(screen.getByLabelText(/cuidador/i));
+    await user.click(screen.getByLabelText(/paseador/i));
     await user.click(screen.getByLabelText(/tratamiento de datos/i));
     await user.click(screen.getByRole("button", { name: /crear cuenta/i }));
 
@@ -114,12 +120,11 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
 
   it("logs in with correct credentials", async () => {
     const { LoginScreen } = await importScreens();
-    mockSignInWithPassword.mockResolvedValueOnce({
-      data: {
-        session: { access_token: "token-abc" },
-        user: { id: "user-1", email: "walker@example.com" },
-      },
-      error: null,
+    mockLogin.mockResolvedValueOnce({
+      access_token: "token-abc",
+      refresh_token: "refresh-abc",
+      expires_in: 3600,
+      user: { id: "user-1" },
     });
 
     const user = userEvent.setup();
@@ -129,15 +134,19 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
     await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
     await user.click(screen.getByRole("button", { name: /ingresar/i }));
 
-    await waitFor(() => expect(mockSignInWithPassword).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(mockLogin).toHaveBeenCalledWith("walker@example.com", "correct horse battery staple"),
+    );
+    expect(mockSetSession).toHaveBeenCalledWith({
+      access_token: "token-abc",
+      refresh_token: "refresh-abc",
+    });
   });
 
   it("shows an error on wrong login credentials", async () => {
     const { LoginScreen } = await importScreens();
-    mockSignInWithPassword.mockResolvedValueOnce({
-      data: { session: null, user: null },
-      error: { message: "Invalid login credentials" },
-    });
+    const { ApiError } = await import("../../apps/web/src/lib/api.js");
+    mockLogin.mockRejectedValueOnce(new ApiError("Invalid credentials", 401));
 
     const user = userEvent.setup();
     render(<LoginScreen />);
@@ -151,7 +160,7 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
 
   it("requests a password reset email", async () => {
     const { ResetPasswordScreen } = await importScreens();
-    mockResetPasswordForEmail.mockResolvedValueOnce({ data: {}, error: null });
+    mockResetPassword.mockResolvedValueOnce({ message: "ok" });
 
     const user = userEvent.setup();
     render(<ResetPasswordScreen />);
@@ -159,12 +168,7 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
     await user.type(screen.getByLabelText(/correo electrónico/i), "walker@example.com");
     await user.click(screen.getByRole("button", { name: /enviar enlace/i }));
 
-    await waitFor(() =>
-      expect(mockResetPasswordForEmail).toHaveBeenCalledWith(
-        "walker@example.com",
-        expect.anything(),
-      ),
-    );
+    await waitFor(() => expect(mockResetPassword).toHaveBeenCalledWith("walker@example.com"));
     expect(await screen.findByText(/revisa tu correo/i)).toBeInTheDocument();
   });
 
@@ -176,7 +180,7 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
     await user.click(screen.getByRole("button", { name: /enviar enlace/i }));
 
     expect(await screen.findByText("Escribe tu correo electrónico.")).toBeInTheDocument();
-    expect(mockResetPasswordForEmail).not.toHaveBeenCalled();
+    expect(mockResetPassword).not.toHaveBeenCalled();
   });
   it("blocks sign up and stores nothing when the data-protection box is unchecked", async () => {
     const { SignupScreen } = await importScreens();
@@ -193,16 +197,15 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
     expect(mockSignUp).not.toHaveBeenCalled();
   });
 
-  it("sends the optional name and phone as user metadata next to the role", async () => {
+  it("shows the password tip and sends only email, password and role to the API", async () => {
     const { SignupScreen } = await importScreens();
-    mockSignUp.mockResolvedValueOnce({ data: { user: { id: "user-1" } }, error: null });
+    mockSignUp.mockResolvedValueOnce({ user: { id: "user-1" }, session: null });
 
     const user = userEvent.setup();
     render(<SignupScreen />);
 
-    await user.type(screen.getByLabelText(/nombre/i), "Ana Pérez");
+    expect(screen.getByText(/una frase larga es más segura/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText(/correo electrónico/i), "ana@example.com");
-    await user.type(screen.getByLabelText(/teléfono/i), "3001234567");
     await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
     await user.click(screen.getByLabelText(/dueño/i));
     await user.click(screen.getByLabelText(/tratamiento de datos/i));
@@ -212,9 +215,45 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
       expect(mockSignUp).toHaveBeenCalledWith({
         email: "ana@example.com",
         password: "correct horse battery staple",
-        options: { data: { role: "owner", full_name: "Ana Pérez", phone: "3001234567" } },
+        role: "owner",
       });
     });
+  });
+
+  it("explains an unverified email on login and offers to resend the link", async () => {
+    const { LoginScreen } = await importScreens();
+    const { ApiError } = await import("../../apps/web/src/lib/api.js");
+    mockLogin.mockRejectedValueOnce(new ApiError("Email not verified", 403));
+    mockResend.mockResolvedValueOnce({ message: "ok" });
+
+    const user = userEvent.setup();
+    render(<LoginScreen />);
+    await user.type(screen.getByLabelText(/correo electrónico/i), "walker@example.com");
+    await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
+    await user.click(screen.getByRole("button", { name: /ingresar/i }));
+
+    expect(await screen.findByText("Primero confirma tu correo.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /reenviar link/i }));
+    await waitFor(() => expect(mockResend).toHaveBeenCalledWith("walker@example.com"));
+  });
+
+  it("locks the form after too many failed logins", async () => {
+    const { LoginScreen } = await importScreens();
+    const { ApiError } = await import("../../apps/web/src/lib/api.js");
+    const tooMany = new ApiError("Too many attempts", 429);
+    tooMany.retryAfter = 900;
+    mockLogin.mockRejectedValueOnce(tooMany);
+
+    const user = userEvent.setup();
+    render(<LoginScreen />);
+    await user.type(screen.getByLabelText(/correo electrónico/i), "walker@example.com");
+    await user.type(screen.getByLabelText(/contraseña/i), "wrong password");
+    await user.click(screen.getByRole("button", { name: /ingresar/i }));
+
+    expect(
+      await screen.findByText("Demasiados intentos. Intenta de nuevo en 15 minutos."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /ingresar/i })).toBeDisabled();
   });
 
   it("shows and hides the password with the eye toggle", async () => {
@@ -234,7 +273,6 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
 
   it.each([
     ["Continuar con Google", "google"],
-    ["Continuar con Apple", "apple"],
   ])("%s starts the OAuth flow with the exact provider", async (name, provider) => {
     const { LoginScreen } = await importScreens();
     mockSignInWithOAuth.mockResolvedValueOnce({ data: {}, error: null });
@@ -281,15 +319,15 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
   it("registers with the role picked on the role screen, without asking for it again", async () => {
     const { AuthShell } = await import("../../apps/web/src/auth/AuthShell.js");
     cleanup();
-    mockSignUp.mockResolvedValueOnce({ data: { user: { id: "user-1" } }, error: null });
+    mockSignUp.mockResolvedValueOnce({ user: { id: "user-1" }, session: null });
     const user = userEvent.setup();
     render(<AuthShell />);
 
-    await user.click(screen.getByLabelText(/soy cuidador/i));
+    await user.click(screen.getByLabelText(/soy paseador/i));
     await user.click(screen.getByRole("button", { name: /continuar/i }));
 
     expect(screen.getByRole("heading", { name: "Crea tu cuenta" })).toBeInTheDocument();
-    expect(screen.getByText("Cuidador")).toBeInTheDocument();
+    expect(screen.getByText("Paseador")).toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: /dueño/i })).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText("Correo electrónico"), "walker@example.com");
@@ -301,7 +339,7 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
       expect(mockSignUp).toHaveBeenCalledWith({
         email: "walker@example.com",
         password: "correct horse battery staple",
-        options: { data: { role: "walker" } },
+        role: "walker",
       });
     });
   });

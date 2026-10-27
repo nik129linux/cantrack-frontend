@@ -1,10 +1,11 @@
 /** Spanish messages for API and network errors shown in the glass screens. */
+import { ApiError } from "./api.js";
 
 const KNOWN_ERRORS: ReadonlyArray<readonly [RegExp, string]> = [
   [/failed to fetch|networkerror|load failed/i, "No pudimos conectar con el servidor. Revisa que la API esté encendida."],
   [/bearer token is required|invalid authentication token/i, "Tu sesión venció. Vuelve a ingresar."],
   [/This offer is no longer available/i, "Otro cuidador ya tomó esta oferta o el dueño la canceló."],
-  [/Create your walker profile before accepting/i, "Crea tu perfil de cuidador antes de aceptar ofertas."],
+  [/Create your walker profile before accepting/i, "Crea tu perfil de paseador antes de aceptar ofertas."],
   [/This dog already has an active request for that time/i, "Ese perro ya tiene un paseo a esa hora."],
   [/Too many pending requests/i, "Tienes demasiadas ofertas pendientes. Cancela alguna primero."],
   [/requestedTime must be in the future/i, "La hora del paseo debe ser en el futuro."],
@@ -18,6 +19,18 @@ const KNOWN_ERRORS: ReadonlyArray<readonly [RegExp, string]> = [
 
 /** Maps an error to Spanish; anything unknown falls back to `fallback`. */
 export function translateApiError(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) {
+    if (error.status >= 500) {
+      return error.errorId !== null
+        ? `Algo falló de nuestro lado. Código: ${error.errorId}`
+        : "Algo falló de nuestro lado.";
+    }
+    if (error.status === 429) {
+      return error.retryAfter !== null
+        ? `Espera ${error.retryAfter} s antes de intentarlo de nuevo.`
+        : "Espera un momento.";
+    }
+  }
   if (typeof error === "object" && error !== null && "message" in error) {
     const message = (error as { message?: unknown }).message;
     if (typeof message === "string") {

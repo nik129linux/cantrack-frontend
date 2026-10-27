@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { AuthShell } from "./auth/AuthShell.js";
+import { PENDING_CONSENT_KEY } from "./auth/AuthScreens.js";
+import { authCopy } from "./auth/messages.js";
 import { PENDING_ROLE_KEY } from "./auth/SocialAuth.js";
 import { OwnerActivityScreen } from "./owner/OwnerActivityScreen.js";
 import { OwnerExploreScreen } from "./owner/OwnerExploreScreen.js";
@@ -13,6 +15,12 @@ import { WalkerProfileScreen } from "./walker/WalkerProfileScreen.js";
 import { WalkerRouteScreen } from "./walker/WalkerRouteScreen.js";
 import { fetchRoutes, type Route } from "./lib/api.js";
 import { formatWhen } from "./lib/format.js";
+import {
+  logoutAccount,
+  recordOwnerConsent,
+  recordWalkerConsent,
+  setAccountRole,
+} from "./lib/marketplace.js";
 import { readPreviewSession } from "./lib/preview.js";
 import { supabase } from "./lib/supabase.js";
 import { Banner } from "./ui/Banner.js";
@@ -267,24 +275,49 @@ export function App() {
     };
   }, [preview]);
 
-  // An OAuth signup arrives without a role; apply the one picked before the redirect.
+  const sessionRole = session?.user.app_metadata?.role;
+
+  // An OAuth signup arrives without a role: the API assigns the one picked before the redirect.
+  // The role lives in app_metadata; user_metadata is never read or written.
   useEffect(() => {
-    if (session === null || session === undefined) {
+    if (session === null || session === undefined || preview !== null) {
       return;
     }
-    const metadataRole = session.user.user_metadata.role;
-    if (metadataRole === "owner" || metadataRole === "walker") {
+    if (sessionRole === "owner" || sessionRole === "walker") {
       return;
     }
     const pendingRole = readPendingRole();
     if (pendingRole === null) {
       return;
     }
-    void supabase.auth
-      .updateUser({ data: { role: pendingRole } })
-      .then(() => window.localStorage.removeItem(PENDING_ROLE_KEY))
-      .catch(() => undefined);
-  }, [session]);
+    void setAccountRole(pendingRole)
+      .then(() => supabase.auth.refreshSession())
+      .catch(() => undefined) // 409: the account already had a role
+      .finally(() => window.localStorage.removeItem(PENDING_ROLE_KEY));
+  }, [session, sessionRole, preview]);
+
+  // Right after the first login, send the consent ticked on the signup form (Ley 1581).
+  useEffect(() => {
+    if (session === null || session === undefined || preview !== null) {
+      return;
+    }
+    if (sessionRole !== "owner" && sessionRole !== "walker") {
+      return;
+    }
+    try {
+      if (window.localStorage.getItem(PENDING_CONSENT_KEY) !== "1") {
+        return;
+      }
+      window.localStorage.removeItem(PENDING_CONSENT_KEY);
+    } catch {
+      return;
+    }
+    // A walker's consent needs a saved profile (409 before it); Perfil asks again then.
+    void (sessionRole === "owner"
+      ? recordOwnerConsent(session.user.id)
+      : recordWalkerConsent(session.user.id)
+    ).catch(() => undefined);
+  }, [session, sessionRole, preview]);
 
   if (session === undefined) {
     return (
@@ -294,11 +327,18 @@ export function App() {
     );
   }
 
-  const role = session?.user.user_metadata.role;
+  const role = sessionRole;
   const userId = session?.user.id ?? "";
   const hasKnownRole = role === "owner" || role === "walker";
-  const logout = () =>
-    preview !== null ? window.location.assign(window.location.pathname) : void supabase.auth.signOut();
+  const logout = (scope?: "global") => {
+    if (preview !== null) {
+      window.location.assign(window.location.pathname);
+      return;
+    }
+    void logoutAccount(scope)
+      .catch(() => undefined)
+      .finally(() => void supabase.auth.signOut({ scope: "local" }));
+  };
 
   return (
     <div ref={shellRef} className="app-shell" data-cantrack-app-shell>
@@ -308,16 +348,19 @@ export function App() {
           <Button
             className="app-shell__logout"
             variant="ghost"
-            onClick={logout}
+            onClick={() => logout()}
           >
             Log out
           </Button>
         </div>
       ) : null}
+      {session !== null && window.location.pathname === "/verificado" ? (
+        <p className="app-shell__status" role="status">{authCopy.verify.activated}</p>
+      ) : null}
       {authError !== null ? <p className="app-shell__alert" role="alert">{authError}</p> : null}
       {session === null ? <AuthShell /> : null}
-      {role === "owner" ? <OwnerShell onLogout={logout} /> : null}
-      {role === "walker" ? <WalkerShell userId={userId} onLogout={logout} /> : null}
+      {role === "owner" ? <OwnerShell onLogout={() => logout()} /> : null}
+      {role === "walker" ? <WalkerShell userId={userId} onLogout={() => logout()} /> : null}
       {session !== null && !hasKnownRole ? (
         <div className="app-shell__panel app-shell__status" role="alert">
           This account does not have a walker or owner role.

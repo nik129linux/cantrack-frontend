@@ -56,6 +56,15 @@ vi.mock("../../apps/web/src/lib/api.js", () => ({
   createRequest: vi.fn().mockResolvedValue(null),
 }));
 
+const mockLogoutAccount = vi.fn().mockResolvedValue(undefined);
+vi.mock("../../apps/web/src/lib/marketplace.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../apps/web/src/lib/marketplace.js")>()),
+  logoutAccount: mockLogoutAccount,
+  setAccountRole: vi.fn().mockResolvedValue({ role: "owner" }),
+  recordOwnerConsent: vi.fn().mockResolvedValue(null),
+  recordWalkerConsent: vi.fn().mockResolvedValue(null),
+}));
+
 async function importApp() {
   return import("../../apps/web/src/App.js");
 }
@@ -64,7 +73,7 @@ function ownerSession() {
   return {
     session: {
       access_token: "t",
-      user: { id: "owner-1", user_metadata: { role: "owner" } },
+      user: { id: "owner-1", app_metadata: { role: "owner" } },
     },
   };
 }
@@ -73,7 +82,7 @@ function walkerSession() {
   return {
     session: {
       access_token: "t",
-      user: { id: "walker-1", user_metadata: { role: "walker" } },
+      user: { id: "walker-1", app_metadata: { role: "walker" } },
     },
   };
 }
@@ -182,12 +191,14 @@ describe("App shell", () => {
     render(<App />);
 
     await user.click(await screen.findByRole("button", { name: "Salir" }));
-    expect(signOut).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
+    expect(mockLogoutAccount).toHaveBeenCalledWith(undefined);
+    expect(signOut).toHaveBeenCalledWith({ scope: "local" });
   });
 
   it("explains an account without a walker or owner role", async () => {
     mockGetSession.mockResolvedValue({
-      data: { session: { access_token: "t", user: { id: "u-1", user_metadata: {} } } },
+      data: { session: { access_token: "t", user: { id: "u-1", app_metadata: {} } } },
     });
 
     const { App } = await importApp();

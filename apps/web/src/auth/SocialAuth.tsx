@@ -1,9 +1,10 @@
 import { supabase } from "../lib/supabase.js";
 import { useAuthMood } from "./AuthMood.js";
-import { AppleIcon, GoogleIcon } from "./icons.js";
+import { GoogleIcon } from "./icons.js";
 import { authCopy } from "./messages.js";
 
-type Provider = "google" | "apple";
+// Apple stays hidden: it needs a paid Apple developer account (docs/frontend/auth-role.md).
+type Provider = "google";
 
 export const PENDING_ROLE_KEY = "cantrack.pendingRole";
 
@@ -49,10 +50,6 @@ export function SocialAuth({ divider, role, onError }: SocialAuthProps) {
         <button type="button" className="auth-social__button" aria-label="Continuar con Google" onClick={() => void handleProvider("google")}>
           <GoogleIcon />
           Google
-        </button>
-        <button type="button" className="auth-social__button" aria-label="Continuar con Apple" onClick={() => void handleProvider("apple")}>
-          <AppleIcon />
-          Apple
         </button>
       </div>
     </div>
