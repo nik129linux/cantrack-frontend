@@ -1,0 +1,112 @@
+/* Real map of Pasto, framed like the glass panels (light on light screens). */
+
+.pickup-map {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.pickup-map__bar {
+  display: grid;
+  gap: 8px;
+}
+
+.pickup-map__hint {
+  margin: 0;
+  color: #4f6a58;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pickup-map__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pickup-map__button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #1f5c37;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), filter 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.pickup-map__button:active {
+  transform: scale(0.97);
+}
+
+.pickup-map__button:focus-visible {
+  outline: 3px solid #86bb32;
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pickup-map__button:hover {
+    filter: brightness(1.12);
+  }
+}
+
+.pickup-map__canvas {
+  height: min(58vh, 520px);
+  min-height: 300px;
+  overflow: hidden;
+  border-radius: 24px;
+  box-shadow: 0 12px 30px rgb(15 50 100 / 22%), 0 0 0 1px rgb(255 255 255 / 70%);
+  z-index: 0;
+}
+
+.pickup-map__notice {
+  min-height: 1.2em;
+  margin: 0;
+  color: #1f5c37;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.pickup-map__fallback {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #ffe9e5;
+  color: #8f2a22;
+  font-weight: 700;
+}
+
+/* The pin: a lime teardrop with a white dot. */
+.pickup-pin {
+  background: none;
+  border: 0;
+}
+
+.pickup-pin__dot {
+  display: block;
+  width: 34px;
+  height: 34px;
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  background: linear-gradient(180deg, #b9e35e, #86bb32);
+  box-shadow: 0 6px 12px rgb(15 50 100 / 35%);
+  transform: rotate(-45deg);
+}
+
+.pickup-pin__dot::after {
+  position: absolute;
+  top: 11px;
+  left: 11px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #10260f;
+  content: "";
+}
+
+.leaflet-container {
+  font-family: inherit;
+}
