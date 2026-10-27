@@ -76,6 +76,16 @@ vi.mock("../../apps/web/src/lib/marketplace.js", async (importOriginal) => ({
   fetchOwnerRequests: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
   fetchFareSuggestion: vi.fn().mockResolvedValue({ suggestedCop: 15000, basis: "default", sampleSize: 0, minCop: 8000, stepCop: 1000 }),
   fetchNearbyWalkers: vi.fn().mockResolvedValue({ count: 0, radiusKm: 2 }),
+  fetchOwnerProfile: vi.fn().mockResolvedValue({
+    ownerId: "owner-1",
+    email: "camila@gmail.com",
+    displayName: "Camila",
+    phone: null,
+    avatarUrl: null,
+    home: null,
+    consent: null,
+    stats: { dogs: 0, walksDone: 0 },
+  }),
   fetchOwnerWalks: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
 }));
 
@@ -305,7 +315,7 @@ describe("App shell — glass navigation", () => {
     expect(screen.queryByRole("heading", { name: "Coming soon" })).not.toBeInTheDocument();
   });
 
-  it("shows a Coming soon empty state on the owner's Perfil tab", async () => {
+  it("shows the owner profile on the Perfil tab", async () => {
     mockGetSession.mockResolvedValue({ data: ownerSession() });
 
     const { App } = await importApp();
@@ -313,7 +323,7 @@ describe("App shell — glass navigation", () => {
     render(<App />);
 
     await openTab(user, "Perfil");
-    expect(await screen.findByRole("heading", { name: "Coming soon" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Perfil", level: 1 })).toBeInTheDocument();
   });
 
   it("shows Mis paseos on the owner's Paseos tab", async () => {

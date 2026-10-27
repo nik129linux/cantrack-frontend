@@ -4,6 +4,7 @@ import { AuthShell } from "./auth/AuthShell.js";
 import { PENDING_CONSENT_KEY } from "./auth/AuthScreens.js";
 import { authCopy } from "./auth/messages.js";
 import { PENDING_ROLE_KEY } from "./auth/SocialAuth.js";
+import { OwnerProfileScreen } from "./owner/OwnerProfileScreen.js";
 import { OwnerWalksScreen } from "./owner/OwnerWalksScreen.js";
 import { OwnerExploreScreen } from "./owner/OwnerExploreScreen.js";
 import { OwnerDogsScreen } from "./owner/OwnerDogsScreen.js";
@@ -177,16 +178,6 @@ function WalkerDashboard() {
   );
 }
 
-/** Placeholder for the marketplace sections that later slices (S1-S5) build. */
-function ComingSoon({ section }: { section: string }) {
-  return (
-    <EmptyState
-      title="Coming soon"
-      message={`The ${section} section lands in a later slice of the marketplace build.`}
-    />
-  );
-}
-
 function WalkerShell({ userId, onLogout }: { userId: string; onLogout: () => void }) {
   return (
     <HomeShell
@@ -211,10 +202,12 @@ function OwnerShell({
   userId,
   isPreview,
   onLogout,
+  onSignOut,
 }: {
   userId: string;
   isPreview: boolean;
   onLogout: () => void;
+  onSignOut: (scope?: "global") => void;
 }) {
   return (
     <HomeShell
@@ -227,7 +220,7 @@ function OwnerShell({
         explore: (go) => <OwnerExploreScreen userId={userId} onPicked={() => go("walks")} />,
         dogs: <OwnerDogsScreen />,
         walks: (go) => <OwnerWalksScreen userId={userId} onRepeated={() => go("explore")} />,
-        profile: <ComingSoon section="Profile" />,
+        profile: <OwnerProfileScreen userId={userId} onSignOut={onSignOut} />,
       }}
     />
   );
@@ -370,7 +363,7 @@ export function App() {
       ) : null}
       {authError !== null ? <p className="app-shell__alert" role="alert">{authError}</p> : null}
       {session === null ? <AuthShell /> : null}
-      {role === "owner" ? <OwnerShell userId={userId} isPreview={preview !== null} onLogout={() => logout()} /> : null}
+      {role === "owner" ? <OwnerShell userId={userId} isPreview={preview !== null} onLogout={() => logout()} onSignOut={logout} /> : null}
       {role === "walker" ? <WalkerShell userId={userId} onLogout={() => logout()} /> : null}
       {session !== null && !hasKnownRole ? (
         <div className="app-shell__panel app-shell__status" role="alert">
