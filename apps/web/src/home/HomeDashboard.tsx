@@ -111,7 +111,7 @@ function WalkerRequests() {
 export type HomeShellProps = {
   role: HomeRole;
   /** Real screens by nav id; an id without a screen shows the home panel. */
-  screens?: Partial<Record<string, ReactNode>>;
+  screens?: Partial<Record<string, ReactNode | ((go: (id: string) => void) => ReactNode)>>;
   onLogout?: () => void;
   /** The signed-in user's id; the home panel reads `/owners/{id}/home` with it. */
   userId?: string;
@@ -129,7 +129,8 @@ export type HomeShellProps = {
 export function HomeShell({ role, screens = {}, onLogout, userId = "", preview = false, onForbidden }: HomeShellProps) {
   const [active, setActive] = useState("home");
   const items = NAV[role];
-  const screen = screens[active];
+  const entry = screens[active];
+  const screen = typeof entry === "function" ? entry(setActive) : entry;
 
   return (
     <div className="auth-scene home">

@@ -50,15 +50,9 @@ const bogotaDay = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
-const cop = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  maximumFractionDigits: 0,
-});
-
-/** "$15.000" */
+/** "$15.000": Colombian pesos, a dot as the thousands separator, no decimals. */
 export function formatCop(value: number): string {
-  return cop.format(value);
+  return `$${Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
 }
 
 /** "lun, 26 oct, 5:00 p. m." in Bogota time; the raw value if it is not a date. */

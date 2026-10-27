@@ -224,7 +224,7 @@ function OwnerShell({
       onLogout={onLogout}
       onForbidden={onLogout}
       screens={{
-        explore: <OwnerExploreScreen />,
+        explore: (go) => <OwnerExploreScreen userId={userId} onPicked={() => go("walks")} />,
         dogs: <OwnerDogsScreen />,
         walks: <OwnerActivityScreen />,
         profile: <ComingSoon section="Profile" />,
