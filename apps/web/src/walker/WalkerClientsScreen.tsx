@@ -1,132 +1,173 @@
 import { useEffect, useState } from "react";
-import { fetchClients, type WalkerClient } from "../lib/api.js";
-import { formatWhen } from "../lib/format.js";
-import { Banner } from "../ui/Banner.js";
-import { Card } from "../ui/Card.js";
-import { EmptyState } from "../ui/EmptyState.js";
-import { Toast } from "../ui/Toast.js";
-import { PawIcon } from "../ui/icons.js";
+import { ApiError } from "../lib/apiError.js";
+import { formatAgo, formatCop, formatWhenBogota } from "../lib/format.js";
+import {
+  fetchClientDetail,
+  fetchClientList,
+  type Client,
+  type ClientDetail,
+} from "../lib/marketplace.js";
+import { DogLoader } from "../ui/DogLoader.js";
+import "../owner/explore.css";
 
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (typeof error === "object" && error !== null && "message" in error) {
-    const message = (error as { message?: unknown }).message;
-    if (typeof message === "string" && message.length > 0) {
-      return message;
+function clientsError(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) {
+    if (error.status >= 500) {
+      return error.errorId !== null
+        ? `Algo falló de nuestro lado. Código: ${error.errorId}`
+        : "Algo falló de nuestro lado.";
+    }
+    if (error.status === 429) {
+      return "Espera un momento";
     }
   }
-
   return fallback;
 }
 
-function Questionnaire({ client }: { client: WalkerClient }) {
-  if (client.profile === null) {
-    return <p className="client-card__missing">No questionnaire yet.</p>;
-  }
+const STATUS = { assigned: "Programado", in_walk: "En curso", done: "Terminado" } as const;
 
-  const rows: Array<[string, string]> = [
-    ["Size", client.profile.size],
-    ["Temperament", client.profile.temperament],
-    ["Energy", client.profile.energy],
-    ["Leash trained", client.profile.leashTrained ? "Yes" : "No"],
-    ["Allergies", client.profile.allergies ?? "None reported"],
-    ["Medical notes", client.profile.medicalNotes ?? "None reported"],
-    ["Vet contact", client.profile.vetContact ?? "Not provided"],
-    ["Emergency contact", client.profile.emergencyContact ?? "Not provided"],
-  ];
-
-  return (
-    <dl className="client-card__profile">
-      {rows.map(([label, value]) => (
-        <div className="client-card__row" key={label}>
-          <dt>{label}</dt>
-          <dd>{value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-/**
- * S2: the walker's Clients tab — every dog with an accepted request addressed
- * to the caller, with the pin, the formatted time and the full questionnaire
- * (the API applied the privacy gate: only accepted requests arrive, and a
- * cancellation removes the client). Times render through formatWhen; the raw
- * ISO value stays only in the <time dateTime> attribute.
- */
-export function WalkerClientsScreen() {
-  const [clients, setClients] = useState<WalkerClient[] | null>(null);
+function ClientDetailView({ walkerId, ownerId, onBack }: { walkerId: string; ownerId: string; onBack: () => void }) {
+  const [detail, setDetail] = useState<ClientDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-
-    async function load() {
-      try {
-        const loaded = await fetchClients();
-        if (isMounted) {
-          setClients(loaded);
+    fetchClientDetail(walkerId, ownerId)
+      .then((loaded) => isMounted && setDetail(loaded))
+      .catch((failure: unknown) => {
+        if (!isMounted) {
+          return;
         }
-      } catch (loadError: unknown) {
-        if (isMounted) {
-          setError(getErrorMessage(loadError, "Unable to load your clients."));
+        // 404: not one of his clients (anymore): back to the list.
+        if (failure instanceof ApiError && failure.status === 404) {
+          onBack();
+        } else {
+          setError(clientsError(failure, "No pudimos cargar al cliente."));
         }
-      }
-    }
-
-    void load();
-
+      });
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [walkerId, ownerId, onBack]);
 
   return (
-    <main className="clients-screen">
-      <Banner
-        title="My clients"
-        subtitle="Dogs you accepted, with their pin and questionnaire."
-        tint="mint"
-      />
+    <div className="explore">
+      <button type="button" className="explore__small" onClick={onBack}>← Volver</button>
+      {error !== null ? <p className="explore__error" role="alert">{error}</p> : null}
+      {detail === null && error === null ? <DogLoader label="Cargando al cliente…" /> : null}
+      {detail !== null ? (
+        <>
+          <header className="explore__head">
+            <h1 className="explore__title">{detail.ownerName ?? "Dueño"}</h1>
+            <p className="explore__subtitle">
+              {detail.walksDone} paseos · {formatCop(detail.grossCop)}
+            </p>
+          </header>
 
-      {error !== null ? <Toast tone="error" message={error} /> : null}
-      {clients === null && error === null ? (
-        <p className="app-shell__status">Loading clients...</p>
-      ) : null}
-      {clients !== null && clients.length === 0 ? (
-        <EmptyState
-          title="No clients yet"
-          message="Accept a request and the dog appears here with its pin and questionnaire."
-        />
-      ) : null}
+          {detail.phone !== null ? (
+            <a className="explore__small explore__small--lime" href={`tel:${detail.phone.replace(/\s/g, "")}`}>
+              Llamar
+            </a>
+          ) : (
+            <p className="explore__hint">El contacto se habilita cuando tengas un paseo asignado</p>
+          )}
 
-      {clients !== null && clients.length > 0 ? (
-        <ul className="clients-list">
-          {clients.map((client) => (
-            <li key={client.requestId}>
-              <Card tint="surface" className="client-card">
-                <header className="client-card__head">
-                  <span className="client-card__icon" aria-hidden="true">
-                    <PawIcon />
-                  </span>
-                  <div className="client-card__heading">
-                    <strong className="client-card__name">{client.dogName}</strong>
-                    <p className="client-card__meta">
-                      <time dateTime={client.requestedTime}>
-                        {formatWhen(client.requestedTime)}
-                      </time>
-                      <span aria-hidden="true"> · </span>
-                      <span>
-                        {client.pickupLat}, {client.pickupLng}
-                      </span>
-                    </p>
-                  </div>
-                </header>
-                <Questionnaire client={client} />
-              </Card>
-            </li>
+          {detail.dogs.map((dog) => (
+            <section key={dog.id} className="explore__offers" aria-label={`Cuidados de ${dog.name ?? "un perro"}`}>
+              <h2 className="explore__section">{dog.name ?? "Un perro"}</h2>
+              {dog.profile === null ? (
+                <p className="explore__empty">Sin notas de cuidado todavía.</p>
+              ) : (
+                <ul className="explore__list">
+                  <li>Tamaño: {dog.profile.size}</li>
+                  <li>Temperamento: {dog.profile.temperament}</li>
+                  <li>Energía: {dog.profile.energy}</li>
+                  <li>Con correa: {dog.profile.leashTrained ? "sí" : "no"}</li>
+                  {dog.profile.allergies ? <li>Alergias: {dog.profile.allergies}</li> : null}
+                  {dog.profile.medicalNotes ? <li>Notas médicas: {dog.profile.medicalNotes}</li> : null}
+                  {dog.profile.vetContact ? <li>Veterinario: {dog.profile.vetContact}</li> : null}
+                  {dog.profile.emergencyContact ? <li>Emergencia: {dog.profile.emergencyContact}</li> : null}
+                </ul>
+              )}
+            </section>
           ))}
-        </ul>
+
+          <section className="explore__offers" aria-label="Paseos">
+            <h2 className="explore__section">Últimos paseos</h2>
+            <ul className="explore__list">
+              {detail.walks.map((walk) => (
+                <li key={walk.id} className="explore__offer">
+                  <div className="explore__offer-main">
+                    <strong>{walk.dogName ?? "Un perro"} · {STATUS[walk.status]}</strong>
+                    <span>{formatWhenBogota(walk.requestedTime)} · {formatCop(walk.priceCop)}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </>
       ) : null}
-    </main>
+    </div>
+  );
+}
+
+/** Clientes (walker): owners he has won at least one walk from. */
+export function WalkerClientsScreen({ userId }: { userId: string }) {
+  const [clients, setClients] = useState<Client[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchClientList(userId)
+      .then((loaded) => isMounted && setClients(loaded))
+      .catch((failure: unknown) => isMounted && setError(clientsError(failure, "No pudimos cargar tus clientes.")));
+    return () => {
+      isMounted = false;
+    };
+  }, [userId, openId]);
+
+  if (openId !== null) {
+    return <ClientDetailView walkerId={userId} ownerId={openId} onBack={() => setOpenId(null)} />;
+  }
+
+  return (
+    <div className="explore">
+      <header className="explore__head">
+        <h1 className="explore__title">Clientes</h1>
+      </header>
+      {error !== null ? <p className="explore__error" role="alert">{error}</p> : null}
+      {clients === null && error === null ? <DogLoader label="Cargando tus clientes…" /> : null}
+      {clients !== null && clients.length === 0 ? (
+        <p className="explore__empty">Cuando ganes tu primer paseo, tus clientes aparecen aquí</p>
+      ) : null}
+      <ul className="explore__list">
+        {(clients ?? []).map((client) => (
+          <li key={client.ownerId} className="explore__offer">
+            <div className="explore__offer-main">
+              <strong>
+                {client.ownerName ?? "Dueño"} · {client.dogs.map((dog) => dog.name ?? "Un perro").join(", ")}
+              </strong>
+              <span>
+                {client.walksDone} {client.walksDone === 1 ? "paseo" : "paseos"}
+                {client.lastWalkAt !== null ? ` · último ${formatAgo(client.lastWalkAt)}` : ""}
+                {client.upcoming > 0 ? ` · ${client.upcoming} por venir` : ""}
+              </span>
+              <span className="explore__fare-value">{formatCop(client.grossCop)}</span>
+            </div>
+            <div className="explore__offer-actions">
+              <button
+                type="button"
+                className="explore__small explore__small--lime"
+                aria-label={`Abrir cliente ${client.ownerName ?? "Dueño"}`}
+                onClick={() => setOpenId(client.ownerId)}
+              >
+                Ver
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

@@ -4,7 +4,7 @@ import { ApiError } from "./apiError.js";
 const KNOWN_ERRORS: ReadonlyArray<readonly [RegExp, string]> = [
   [/failed to fetch|networkerror|load failed/i, "No pudimos conectar con el servidor. Revisa que la API esté encendida."],
   [/bearer token is required|invalid authentication token/i, "Tu sesión venció. Vuelve a ingresar."],
-  [/This offer is no longer available/i, "Otro cuidador ya tomó esta oferta o el dueño la canceló."],
+  [/This offer is no longer available/i, "Otro paseador ya tomó esta oferta o el dueño la canceló."],
   [/Create your walker profile before accepting/i, "Crea tu perfil de paseador antes de aceptar ofertas."],
   [/This dog already has an active request for that time/i, "Ese perro ya tiene un paseo a esa hora."],
   [/Too many pending requests/i, "Tienes demasiadas ofertas pendientes. Cancela alguna primero."],

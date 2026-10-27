@@ -76,6 +76,26 @@ vi.mock("../../apps/web/src/lib/marketplace.js", async (importOriginal) => ({
   fetchOwnerRequests: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
   fetchFareSuggestion: vi.fn().mockResolvedValue({ suggestedCop: 15000, basis: "default", sampleSize: 0, minCop: 8000, stepCop: 1000 }),
   fetchNearbyWalkers: vi.fn().mockResolvedValue({ count: 0, radiusKm: 2 }),
+  // Walker screens.
+  fetchWalkerHome: vi.fn().mockResolvedValue({
+    greetingName: "Mateo", online: false, activeWalk: null, nextWalk: null,
+    today: { walks: 0, grossCop: 0, commissionCop: 0, netCop: 0 },
+    rating: { average: null, count: 0 }, openNearby: 0, pendingOffers: 0,
+  }),
+  fetchEarnings: vi.fn().mockResolvedValue({
+    period: "week", from: "2026-10-19", to: "2026-10-25", simulated: true, commissionPct: 10,
+    walks: 0, grossCop: 0, commissionCop: 0, netCop: 0, byDay: [],
+  }),
+  fetchOpenRequests: vi.fn().mockResolvedValue([]),
+  fetchMyOffers: vi.fn().mockResolvedValue([]),
+  fetchClientList: vi.fn().mockResolvedValue([]),
+  fetchDayRoute: vi.fn().mockResolvedValue({ date: "2026-10-27", start: null, stops: [], totalKm: 0, totalMinutes: 0, nextStopId: null }),
+  fetchWalkerAccountProfile: vi.fn().mockResolvedValue({
+    walkerId: "walker-1", email: "mateo@gmail.com", displayName: "Mateo", bio: null, serviceArea: null,
+    pricePerWalk: 15000, phone: null, avatarUrl: null, consent: null,
+    stats: { walksDone: 0, rating: { average: null, count: 0 } },
+  }),
+  fetchWalkerWalks: vi.fn().mockResolvedValue([]),
   fetchOwnerProfile: vi.fn().mockResolvedValue({
     ownerId: "owner-1",
     email: "camila@gmail.com",
@@ -156,7 +176,7 @@ describe("App shell", () => {
     const { App } = await importApp();
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "Hola, paseador", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Hola, Mateo", level: 1 })).toBeInTheDocument();
   });
 
   it("shows the owner's dogs screen from the Mis perros tab", async () => {
@@ -168,40 +188,6 @@ describe("App shell", () => {
 
     await openTab(user, "Mis perros");
     expect(await screen.findByRole("button", { name: /add dog/i })).toBeInTheDocument();
-  });
-
-  it("shows the walker's route list on the Rutas tab", async () => {
-    mockGetSession.mockResolvedValue({ data: walkerSession() });
-    mockFetchRoutes.mockResolvedValue([
-      { id: "route-1", stops: [{ dogId: "dog-1", dogName: "Firulais" }] },
-      { id: "route-2", stops: [{ dogId: "dog-2", dogName: "Rex" }] },
-    ]);
-
-    const { App } = await importApp();
-    const user = userEvent.setup();
-    render(<App />);
-
-    await openTab(user, "Rutas");
-    // S2 polish item 3: route cards are titled with the first dog (plus the
-    // formatted time when the stop carries one), never the route UUID.
-    expect(await screen.findByText("Firulais")).toBeInTheDocument();
-    expect(screen.getByText("Rex")).toBeInTheDocument();
-  });
-
-  it("opens a walker route from the list", async () => {
-    mockGetSession.mockResolvedValue({ data: walkerSession() });
-    mockFetchRoutes.mockResolvedValue([
-      { id: "route-1", stops: [{ dogId: "dog-1", dogName: "Firulais" }] },
-    ]);
-
-    const { App } = await importApp();
-    const user = userEvent.setup();
-    render(<App />);
-
-    await openTab(user, "Rutas");
-    await user.click(await screen.findByText("Firulais"));
-
-    expect(await screen.findByRole("button", { name: /all routes/i })).toBeInTheDocument();
   });
 
   it("logs out through the Salir button", async () => {
@@ -302,19 +288,6 @@ describe("App shell — glass navigation", () => {
     expect(await screen.findByRole("heading", { name: "Hola, Camila", level: 1 })).toBeInTheDocument();
   });
 
-  it("shows the clients screen on the walker's Clientes tab (S2)", async () => {
-    mockGetSession.mockResolvedValue({ data: walkerSession() });
-    mockFetchRoutes.mockResolvedValue([]);
-
-    const { App } = await importApp();
-    const user = userEvent.setup();
-    render(<App />);
-
-    await openTab(user, "Clientes");
-    expect(await screen.findByRole("heading", { name: "My clients" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Coming soon" })).not.toBeInTheDocument();
-  });
-
   it("shows the owner profile on the Perfil tab", async () => {
     mockGetSession.mockResolvedValue({ data: ownerSession() });
 
@@ -338,30 +311,46 @@ describe("App shell — glass navigation", () => {
     expect(screen.queryByRole("heading", { name: "Coming soon" })).not.toBeInTheDocument();
   });
 
-  it("shows the walker inbox on the Solicitudes tab (S1)", async () => {
+  it("shows the walker's inbox on the Solicitudes tab", async () => {
     mockGetSession.mockResolvedValue({ data: walkerSession() });
-    mockFetchRoutes.mockResolvedValue([]);
-
     const { App } = await importApp();
     const user = userEvent.setup();
     render(<App />);
 
     await openTab(user, "Solicitudes");
-    expect(await screen.findByRole("heading", { name: "Ofertas de paseo" })).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "Requests" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Coming soon" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Solicitudes", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByText(/No hay solicitudes cerca/)).toBeInTheDocument();
   });
 
-  it("shows the walker profile form on the Perfil tab (S1)", async () => {
+  it("shows the clients screen on the walker's Clientes tab", async () => {
     mockGetSession.mockResolvedValue({ data: walkerSession() });
-    mockFetchRoutes.mockResolvedValue([]);
+    const { App } = await importApp();
+    const user = userEvent.setup();
+    render(<App />);
 
+    await openTab(user, "Clientes");
+    expect(await screen.findByRole("heading", { name: "Clientes", level: 1 })).toBeInTheDocument();
+  });
+
+  it("shows the day route on the walker's Rutas tab", async () => {
+    mockGetSession.mockResolvedValue({ data: walkerSession() });
+    const { App } = await importApp();
+    const user = userEvent.setup();
+    render(<App />);
+
+    await openTab(user, "Rutas");
+    expect(await screen.findByRole("heading", { name: "Rutas", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByText(/No tienes paseos este día/)).toBeInTheDocument();
+  });
+
+  it("shows the walker profile on the Perfil tab", async () => {
+    mockGetSession.mockResolvedValue({ data: walkerSession() });
     const { App } = await importApp();
     const user = userEvent.setup();
     render(<App />);
 
     await openTab(user, "Perfil");
-    expect(await screen.findByLabelText("Display name")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Nombre")).toHaveValue("Mateo");
   });
 
   it("shows walker discovery on the owner's Explorar tab (S1)", async () => {
@@ -374,46 +363,6 @@ describe("App shell — glass navigation", () => {
     await openTab(user, "Explorar");
     expect(await screen.findByRole("heading", { name: "Explorar", level: 1 })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Mis solicitudes" })).toBeInTheDocument();
-  });
-
-  it("shows the pickup-plan panel on the walker's Rutas tab (S2)", async () => {
-    mockGetSession.mockResolvedValue({ data: walkerSession() });
-    mockFetchRoutes.mockResolvedValue([]);
-
-    const { App } = await importApp();
-    const user = userEvent.setup();
-    render(<App />);
-
-    await openTab(user, "Rutas");
-    expect(await screen.findByRole("button", { name: "Suggest order" })).toBeInTheDocument();
-  });
-
-  it("titles route cards with the first dog and the formatted time, not the UUID (S2)", async () => {
-    mockGetSession.mockResolvedValue({ data: walkerSession() });
-    mockFetchRoutes.mockResolvedValue([
-      {
-        id: "route-1",
-        stops: [
-          { dogId: "dog-1", dogName: "Firulais", pickupTime: "2026-10-05T10:00:00.000Z" },
-          { dogId: "dog-2", dogName: "Rex", pickupTime: "2026-10-05T11:00:00.000Z" },
-        ],
-      },
-    ]);
-
-    const { App } = await importApp();
-    const user = userEvent.setup();
-    render(<App />);
-
-    await openTab(user, "Rutas");
-    const formatted = new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date("2026-10-05T10:00:00.000Z"));
-
-    expect(await screen.findByText("Firulais")).toBeInTheDocument();
-    expect(screen.getByText(`${formatted} · 2 stops`)).toBeInTheDocument();
-    expect(screen.queryByText(/route-1/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/2026-10-05T/)).not.toBeInTheDocument();
   });
 
   it("loads the design tokens stylesheet from the app entry", async () => {

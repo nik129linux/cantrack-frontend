@@ -5,17 +5,13 @@ import { PENDING_CONSENT_KEY } from "./auth/AuthScreens.js";
 import { authCopy } from "./auth/messages.js";
 import { PENDING_ROLE_KEY } from "./auth/SocialAuth.js";
 import { OwnerProfileScreen } from "./owner/OwnerProfileScreen.js";
+import { WalkerClientsScreen } from "./walker/WalkerClientsScreen.js";
+import { WalkerProfileScreen } from "./walker/WalkerProfileScreen.js";
+import { WalkerRequestsScreen } from "./walker/WalkerRequestsScreen.js";
+import { WalkerRoutesScreen } from "./walker/WalkerRoutesScreen.js";
 import { OwnerWalksScreen } from "./owner/OwnerWalksScreen.js";
 import { OwnerExploreScreen } from "./owner/OwnerExploreScreen.js";
 import { OwnerDogsScreen } from "./owner/OwnerDogsScreen.js";
-import { WalkerClientsScreen } from "./walker/WalkerClientsScreen.js";
-import { WalkerInboxScreen } from "./walker/WalkerInboxScreen.js";
-import { WalkerOffersScreen } from "./walker/WalkerOffersScreen.js";
-import { WalkerPlanPanel } from "./walker/WalkerPlanPanel.js";
-import { WalkerProfileScreen } from "./walker/WalkerProfileScreen.js";
-import { WalkerRouteScreen } from "./walker/WalkerRouteScreen.js";
-import { fetchRoutes, type Route } from "./lib/api.js";
-import { formatWhen } from "./lib/format.js";
 import {
   logoutAccount,
   recordOwnerConsent,
@@ -24,21 +20,11 @@ import {
 } from "./lib/marketplace.js";
 import { readPreviewSession } from "./lib/preview.js";
 import { supabase } from "./lib/supabase.js";
-import { Banner } from "./ui/Banner.js";
 import { DogLoader } from "./ui/DogLoader.js";
 import { HomeShell } from "./home/HomeDashboard.js";
 import { Button } from "./ui/Button.js";
-import { EmptyState } from "./ui/EmptyState.js";
-import { ListRow } from "./ui/ListRow.js";
-import { ClockIcon } from "./ui/icons.js";
 import "./ui/tokens.css";
 import "./app-shell.css";
-
-const routeTintNames = ["mint", "peach", "butter", "sky", "sage"] as const;
-
-function getRouteTint(index: number): string {
-  return routeTintNames[index % routeTintNames.length] ?? "mint";
-}
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === "object" && error !== null && "message" in error) {
@@ -75,124 +61,30 @@ function useAppShellMount() {
   return shellRef;
 }
 
-function RouteList({ onOpen }: { onOpen: (route: Route) => void }) {
-  const [routes, setRoutes] = useState<Route[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    void fetchRoutes()
-      .then((loadedRoutes) => {
-        if (isMounted) {
-          setRoutes(loadedRoutes);
-        }
-      })
-      .catch((loadError: unknown) => {
-        if (isMounted) {
-          setError(getErrorMessage(loadError, "Unable to load your routes."));
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  return (
-    <div className="route-dashboard">
-      <Banner
-        title="Your routes"
-        subtitle={`Today’s schedule · ${routes.length} ${routes.length === 1 ? "route" : "routes"}`}
-        tint="sky"
-      />
-
-      {isLoading ? <p className="app-shell__status">Loading routes...</p> : null}
-      {error !== null ? <p className="app-shell__alert" role="alert">{error}</p> : null}
-      {!isLoading && error === null && routes.length === 0 ? (
-        <EmptyState
-          title="No routes scheduled"
-          message="Your next walk will appear here when it is ready."
-        />
-      ) : null}
-
-      {routes.length > 0 ? (
-        <ol className="route-list" aria-label="Your routes">
-          {routes.map((route, routeIndex) => {
-            const firstDog = route.stops[0]?.dogName ?? route.stops[0]?.dogId;
-            const firstTime = route.stops[0]?.pickupTime;
-            const stopLabel = `${route.stops.length} ${route.stops.length === 1 ? "stop" : "stops"}`;
-            // Polish item 3 (S2): the card is titled with the first dog and the
-            // formatted time — never the route UUID, never a raw ISO string.
-            const subtitle = [firstTime ? formatWhen(firstTime) : null, stopLabel]
-              .filter((part) => part !== null)
-              .join(" · ");
-
-            return (
-              <li key={route.id}>
-                <ListRow
-                  data-tint={getRouteTint(routeIndex)}
-                  icon={<ClockIcon />}
-                  title={firstDog ?? "Route"}
-                  subtitle={subtitle}
-                  onClick={() => onOpen(route)}
-                />
-              </li>
-            );
-          })}
-        </ol>
-      ) : null}
-    </div>
-  );
-}
-
-function WalkerDashboard() {
-  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
-
-  if (selectedRoute !== null) {
-    return (
-      <div className="route-detail">
-        <Button
-          className="route-detail__back"
-          variant="ghost"
-          onClick={() => setSelectedRoute(null)}
-        >
-          <span aria-hidden="true">←</span> All routes
-        </Button>
-        <WalkerRouteScreen routeId={selectedRoute.id} initialRoute={selectedRoute} />
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <WalkerPlanPanel />
-      <RouteList onOpen={setSelectedRoute} />
-    </>
-  );
-}
-
-function WalkerShell({ userId, onLogout }: { userId: string; onLogout: () => void }) {
+function WalkerShell({
+  userId,
+  isPreview,
+  onLogout,
+  onSignOut,
+}: {
+  userId: string;
+  isPreview: boolean;
+  onLogout: () => void;
+  onSignOut: (scope?: "global") => void;
+}) {
   return (
     <HomeShell
       role="walker"
+      userId={userId}
+      preview={isPreview}
       onLogout={onLogout}
       screens={{
-        requests: (
-          <>
-            <WalkerOffersScreen />
-            <WalkerInboxScreen />
-          </>
+        requests: (go) => (
+          <WalkerRequestsScreen userId={userId} onGoHome={() => go("home")} onGoRoutes={() => go("routes")} />
         ),
-        clients: <WalkerClientsScreen />,
-        routes: <WalkerDashboard />,
-        profile: <WalkerProfileScreen userId={userId} />,
+        clients: <WalkerClientsScreen userId={userId} />,
+        routes: <WalkerRoutesScreen userId={userId} />,
+        profile: <WalkerProfileScreen userId={userId} onSignOut={onSignOut} />,
       }}
     />
   );
@@ -364,7 +256,7 @@ export function App() {
       {authError !== null ? <p className="app-shell__alert" role="alert">{authError}</p> : null}
       {session === null ? <AuthShell /> : null}
       {role === "owner" ? <OwnerShell userId={userId} isPreview={preview !== null} onLogout={() => logout()} onSignOut={logout} /> : null}
-      {role === "walker" ? <WalkerShell userId={userId} onLogout={() => logout()} /> : null}
+      {role === "walker" ? <WalkerShell userId={userId} isPreview={preview !== null} onLogout={() => logout()} onSignOut={logout} /> : null}
       {session !== null && !hasKnownRole ? (
         <div className="app-shell__panel app-shell__status" role="alert">
           This account does not have a walker or owner role.

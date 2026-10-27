@@ -69,19 +69,13 @@ describe("Development preview (?preview=...)", () => {
     expect(mockOnAuthStateChange).not.toHaveBeenCalled();
   });
 
-  it("enters as a walker and loads the route list", async () => {
+  it("enters as a walker on the online home without asking Supabase for a session", async () => {
     window.history.pushState({}, "", "/?preview=walker");
-    mockFetchRoutes.mockResolvedValue([
-      { id: "route-1", stops: [{ dogId: "dog-1", dogName: "Firulais" }] },
-    ]);
     const { App } = await importApp();
-    const user = userEvent.setup();
     render(<App />);
 
-    const nav = await screen.findByRole("navigation", { name: "Principal" });
-    await user.click(within(nav).getByRole("button", { name: "Rutas" }));
-
-    expect(await screen.findByText("Firulais")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Hola, Mateo", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Conectado" })).toBeChecked();
     expect(mockGetSession).not.toHaveBeenCalled();
   });
 

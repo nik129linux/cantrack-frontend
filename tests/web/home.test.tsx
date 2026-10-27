@@ -15,24 +15,6 @@ async function importHome() {
   return import("../../apps/web/src/home/HomeDashboard.js");
 }
 
-describe("formatCop and suggestedFare", () => {
-  it("formats Colombian pesos with dots", async () => {
-    const { formatCop } = await import("../../apps/web/src/home/sampleData.js");
-    expect(formatCop(0)).toBe("$0");
-    expect(formatCop(950)).toBe("$950");
-    expect(formatCop(15000)).toBe("$15.000");
-    expect(formatCop(1250000)).toBe("$1.250.000");
-  });
-
-  it("suggests a fare per duration, never below the minimum", async () => {
-    const { suggestedFare } = await import("../../apps/web/src/home/sampleData.js");
-    expect(suggestedFare(30)).toBe(10000);
-    expect(suggestedFare(45)).toBe(15000);
-    expect(suggestedFare(60)).toBe(20000);
-    expect(suggestedFare(5)).toBe(8000);
-  });
-});
-
 vi.mock("../../apps/web/src/lib/supabase.js", () => ({ supabase: { auth: {} } }));
 
 const mockFetchOwnerHome = vi.fn();
@@ -185,40 +167,5 @@ describe("Home panel — owner", () => {
 
     await user.click(await screen.findByRole("button", { name: "Pedir un paseo" }));
     expect(screen.getByText("pantalla explorar")).toBeInTheDocument();
-  });
-});
-
-describe("Home panel — walker", () => {
-  beforeEach(() => cleanup());
-
-  it("greets the walker and lists the three sample requests with their offers", async () => {
-    const { HomeDashboard } = await importHome();
-    render(<HomeDashboard role="walker" />);
-
-    expect(screen.getByRole("heading", { name: "Hola, paseador", level: 1 })).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Pedir un paseo" })).not.toBeInTheDocument();
-
-    const requests = screen.getByRole("region", { name: "Solicitudes" });
-    expect(within(requests).getAllByRole("listitem")).toHaveLength(3);
-    expect(within(requests).getByText("Luna · $15.000")).toBeInTheDocument();
-    expect(within(requests).getByText("Max · $12.000")).toBeInTheDocument();
-    expect(within(requests).getByText("Nala · $18.000")).toBeInTheDocument();
-  });
-
-  it("accepts one request and declines another, only touching those rows", async () => {
-    const { HomeDashboard } = await importHome();
-    const user = userEvent.setup();
-    render(<HomeDashboard role="walker" />);
-
-    const requests = screen.getByRole("region", { name: "Solicitudes" });
-    await user.click(within(requests).getByRole("button", { name: "Aceptar a Luna" }));
-    await user.click(within(requests).getByRole("button", { name: "Rechazar a Max" }));
-
-    expect(within(requests).getByText("Aceptada")).toBeInTheDocument();
-    expect(within(requests).getByText("Rechazada")).toBeInTheDocument();
-    expect(within(requests).queryByRole("button", { name: "Aceptar a Luna" })).not.toBeInTheDocument();
-    expect(within(requests).queryByRole("button", { name: "Rechazar a Max" })).not.toBeInTheDocument();
-    expect(within(requests).getByRole("button", { name: "Aceptar a Nala" })).toBeInTheDocument();
-    expect(within(requests).getByRole("button", { name: "Rechazar a Nala" })).toBeInTheDocument();
   });
 });

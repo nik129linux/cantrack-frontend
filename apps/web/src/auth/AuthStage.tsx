@@ -201,7 +201,7 @@ export function AuthStage({ mood }: AuthStageProps) {
         <button
           type="button"
           className="auth-char auth-char--walker"
-          aria-label="Saludar al cuidador"
+          aria-label="Saludar al paseador"
           onClick={greetWalker}
         >
           <span className="auth-char__shadow" aria-hidden="true" />

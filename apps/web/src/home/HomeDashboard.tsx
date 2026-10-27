@@ -1,16 +1,13 @@
 import { useState, type ReactNode } from "react";
-import { CityScene } from "../city/CityScene.js";
-import { ClockIcon, WalletIcon } from "../auth/icons.js";
 import {
-  CheckIcon,
-  CloseIcon,
   CompassIcon,
   HomeIcon,
   ListIcon,
   PawLineIcon,
   PersonIcon,
 } from "./icons.js";
-import { WALKER_REQUESTS, formatCop, type HomeRole } from "./sampleData.js";
+import type { HomeRole } from "./previewData.js";
+import { WalkerHome } from "./WalkerHome.js";
 import { OwnerHome } from "./OwnerHome.js";
 import "../auth/auth.css";
 import "./home.css";
@@ -33,80 +30,6 @@ const NAV: Record<HomeRole, NavItem[]> = {
     { id: "profile", label: "Perfil", icon: <PersonIcon /> },
   ],
 };
-
-function WalkerGreeting() {
-  return (
-    <header className="home__greeting">
-      <h1 className="home__title">Hola, paseador</h1>
-      <p className="home__subtitle">Estas son tus solicitudes de hoy.</p>
-    </header>
-  );
-}
-
-function WalkerTicket() {
-  return (
-    <section className="glass home__ticket" aria-label="Próximo recorrido">
-      <div className="home__ticket-main">
-        <p className="home__ticket-label">Próximo recorrido</p>
-        <p className="home__ticket-title">3 paradas</p>
-        <p className="home__ticket-sub">Hoy, 5:00 pm · Centro y Torobajo</p>
-        <ul className="home__chips">
-          <li><ClockIcon />2 h 10 min</li>
-          <li><WalletIcon />{formatCop(45000)}</li>
-        </ul>
-      </div>
-      <img className="home__ticket-art" src="/art/characters/walker-thumbs.webp" alt="" draggable={false} />
-    </section>
-  );
-}
-
-type Decision = "accepted" | "declined";
-
-function WalkerRequests() {
-  const [decisions, setDecisions] = useState<Record<string, Decision>>({});
-
-  return (
-    <section className="glass home__list" aria-label="Solicitudes">
-      <h2 className="home__card-title">Solicitudes</h2>
-      <ul>
-        {WALKER_REQUESTS.map((request) => {
-          const decision = decisions[request.id];
-          return (
-            <li key={request.id} className="home__row home__row--request" data-decision={decision ?? "pending"}>
-              <span className="home__chip-icon"><PawLineIcon /></span>
-              <span className="home__row-text">
-                <strong>{request.dog} · {formatCop(request.offerCop)}</strong>
-                <span>{request.owner} · {request.zone} · {request.when}</span>
-              </span>
-              {decision === undefined ? (
-                <span className="home__row-actions">
-                  <button
-                    type="button"
-                    className="home__round home__round--ok"
-                    aria-label={`Aceptar a ${request.dog}`}
-                    onClick={() => setDecisions((current) => ({ ...current, [request.id]: "accepted" }))}
-                  >
-                    <CheckIcon />
-                  </button>
-                  <button
-                    type="button"
-                    className="home__round home__round--no"
-                    aria-label={`Rechazar a ${request.dog}`}
-                    onClick={() => setDecisions((current) => ({ ...current, [request.id]: "declined" }))}
-                  >
-                    <CloseIcon />
-                  </button>
-                </span>
-              ) : (
-                <span className="home__row-when">{decision === "accepted" ? "Aceptada" : "Rechazada"}</span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
 
 export type HomeShellProps = {
   role: HomeRole;
@@ -173,14 +96,7 @@ export function HomeShell({ role, screens = {}, onLogout, userId = "", preview =
           onForbidden={onForbidden}
         />
       ) : (
-        <main className="home__grid">
-          <WalkerGreeting />
-          <WalkerTicket />
-          <div className="home__city">
-            <CityScene />
-          </div>
-          <WalkerRequests />
-        </main>
+        <WalkerHome userId={userId} preview={preview} onNavigate={setActive} />
       )}
     </div>
   );
