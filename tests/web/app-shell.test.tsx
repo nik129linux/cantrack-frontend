@@ -56,11 +56,12 @@ vi.mock("../../apps/web/src/lib/api.js", () => ({
   createRequest: vi.fn().mockResolvedValue(null),
 }));
 
+const mockSetAccountRole = vi.fn().mockResolvedValue({ role: "owner" });
 const mockLogoutAccount = vi.fn().mockResolvedValue(undefined);
 vi.mock("../../apps/web/src/lib/marketplace.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../apps/web/src/lib/marketplace.js")>()),
   logoutAccount: mockLogoutAccount,
-  setAccountRole: vi.fn().mockResolvedValue({ role: "owner" }),
+  setAccountRole: mockSetAccountRole,
   recordOwnerConsent: vi.fn().mockResolvedValue(null),
   recordWalkerConsent: vi.fn().mockResolvedValue(null),
   // Inicio and Explorar of the owner read the marketplace API.
@@ -206,6 +207,18 @@ describe("App shell", () => {
     expect(signOut).toHaveBeenCalledWith({ scope: "local" });
   });
 
+  it("asks the API for the role of an old account that only had it in user_metadata", async () => {
+    mockSetAccountRole.mockClear();
+    mockGetSession.mockResolvedValue({
+      data: { session: { access_token: "t", user: { id: "u-1", app_metadata: {}, user_metadata: { role: "walker" } } } },
+    });
+
+    const { App } = await importApp();
+    render(<App />);
+
+    await vi.waitFor(() => expect(mockSetAccountRole).toHaveBeenCalledWith("walker"));
+  });
+
   it("explains an account without a walker or owner role", async () => {
     mockGetSession.mockResolvedValue({
       data: { session: { access_token: "t", user: { id: "u-1", app_metadata: {} } } },
@@ -215,7 +228,7 @@ describe("App shell", () => {
     render(<App />);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "This account does not have a walker or owner role.",
+      "Tu cuenta aún no tiene un rol de dueño o paseador.",
     );
     expect(screen.queryByRole("navigation", { name: "Principal" })).not.toBeInTheDocument();
   });

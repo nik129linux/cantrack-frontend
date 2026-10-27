@@ -182,13 +182,17 @@ export function App() {
     if (sessionRole === "owner" || sessionRole === "walker") {
       return;
     }
-    const pendingRole = readPendingRole();
+    // Accounts made before the API took over signup only carry the role in user_metadata.
+    // It is sent as a hint, never trusted: the API assigns app_metadata.role itself.
+    const legacy = session.user.user_metadata?.role;
+    const legacyRole = legacy === "owner" || legacy === "walker" ? legacy : null;
+    const pendingRole = readPendingRole() ?? legacyRole;
     if (pendingRole === null) {
       return;
     }
     void setAccountRole(pendingRole)
       .then(() => supabase.auth.refreshSession())
-      .catch(() => undefined) // 409: the account already had a role
+      .catch(() => setAuthError("No pudimos activar tu rol. Cierra sesión e inténtalo de nuevo."))
       .finally(() => window.localStorage.removeItem(PENDING_ROLE_KEY));
   }, [session, sessionRole, preview]);
 
@@ -259,7 +263,7 @@ export function App() {
       {role === "walker" ? <WalkerShell userId={userId} isPreview={preview !== null} onLogout={() => logout()} onSignOut={logout} /> : null}
       {session !== null && !hasKnownRole ? (
         <div className="app-shell__panel app-shell__status" role="alert">
-          This account does not have a walker or owner role.
+          Tu cuenta aún no tiene un rol de dueño o paseador.
         </div>
       ) : null}
     </div>
