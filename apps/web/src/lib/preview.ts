@@ -24,7 +24,6 @@ export function readPreviewSession(search: string = window.location.search): Ses
     user: {
       id: `preview-${role}`,
       aud: "authenticated",
-      app_metadata: {},
       app_metadata: { role },
       created_at: "",
     },

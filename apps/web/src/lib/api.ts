@@ -1,4 +1,7 @@
+import { ApiError } from "./apiError.js";
 import { supabase } from "./supabase.js";
+
+export { ApiError };
 
 export type Dog = {
   id: string;
@@ -66,19 +69,6 @@ export type RequestOptions = {
   /** Skip the Authorization header (login and signup have no session yet). */
   anonymous?: boolean;
 };
-
-/** An API failure with what the screens need: status, Retry-After and errorId. */
-export class ApiError extends Error {
-  status: number;
-  retryAfter: number | null = null;
-  errorId: string | null = null;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-  }
-}
 
 /**
  * One validation problem out of a FastAPI `{"detail": [...]}` list, e.g.

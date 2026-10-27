@@ -1,5 +1,5 @@
 /** Spanish messages for API and network errors shown in the glass screens. */
-import { ApiError } from "./api.js";
+import { ApiError } from "./apiError.js";
 
 const KNOWN_ERRORS: ReadonlyArray<readonly [RegExp, string]> = [
   [/failed to fetch|networkerror|load failed/i, "No pudimos conectar con el servidor. Revisa que la API esté encendida."],

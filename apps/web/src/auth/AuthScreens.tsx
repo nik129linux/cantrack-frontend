@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ApiError } from "../lib/api.js";
+import { ApiError } from "../lib/apiError.js";
 import {
   loginAccount,
   requestPasswordReset,

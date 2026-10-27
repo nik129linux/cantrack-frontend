@@ -132,7 +132,7 @@ describe("App shell", () => {
     const { App } = await importApp();
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "Hola, cuidador", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Hola, paseador", level: 1 })).toBeInTheDocument();
   });
 
   it("shows the owner's dogs screen from the Mis perros tab", async () => {

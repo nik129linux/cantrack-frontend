@@ -609,3 +609,9 @@
     transition: none;
   }
 }
+
+.home__card-loader {
+  display: grid;
+  place-items: center;
+  min-height: 140px;
+}

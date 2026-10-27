@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-// Home panel (sample data for now): navigation, the owner's fare offer
-// (inDrive style: owner proposes the price) and the walker's accept/decline.
+// Home panel: the owner reads /owners/{id}/home and /weather; the walker
+// side still shows sample data until its brief lands.
 // The animated city needs ResizeObserver/canvas-free DOM only, so it is stubbed.
 
 vi.mock("../../apps/web/src/city/CityScene.js", () => ({
@@ -33,23 +33,133 @@ describe("formatCop and suggestedFare", () => {
   });
 });
 
+vi.mock("../../apps/web/src/lib/supabase.js", () => ({ supabase: { auth: {} } }));
+
+const mockFetchOwnerHome = vi.fn();
+const mockFetchWeather = vi.fn();
+vi.mock("../../apps/web/src/lib/marketplace.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../apps/web/src/lib/marketplace.js")>()),
+  fetchOwnerHome: mockFetchOwnerHome,
+  fetchWeather: mockFetchWeather,
+}));
+
+const weather = {
+  lat: 1.2,
+  lng: -77.2,
+  temperatureC: 14,
+  condition: "cloudy",
+  hours: [{ at: "2026-10-27T17:00:00+00:00", temperatureC: 17, condition: "clear", precipitationProbability: 5 }],
+  bestWindow: { start: "2026-10-27T16:00:00+00:00", end: "2026-10-27T18:00:00+00:00", reason: "dry_and_mild" },
+  stale: false,
+};
+
+const walk = {
+  id: "w1",
+  dogName: "Luna",
+  walkerName: "Mateo",
+  requestedTime: "2026-10-27T22:00:00+00:00",
+  durationHours: 0.75,
+  priceCop: 15000,
+};
+
+function panel(overrides: Record<string, unknown> = {}) {
+  return {
+    greetingName: "Camila",
+    activeWalk: null,
+    nextWalk: walk,
+    upcoming: [walk, { ...walk, id: "w2", walkerName: null }],
+    openRequests: [
+      { id: "r1", dogName: "Max", requestedTime: "2026-10-28T13:00:00+00:00", priceCop: 12000, offerCount: 3, deadlineAt: "2026-10-27T20:10:00+00:00" },
+    ],
+    counts: { dogs: 2, walksDone: 7, openRequests: 1 },
+    ...overrides,
+  };
+}
+
 describe("Home panel — owner", () => {
-  beforeEach(() => cleanup());
+  beforeEach(() => {
+    cleanup();
+    mockFetchOwnerHome.mockReset();
+    mockFetchWeather.mockReset();
+    mockFetchWeather.mockResolvedValue(weather);
+  });
 
-  it("greets the owner and shows the next walk, weather and city", async () => {
-    const { HomeDashboard } = await importHome();
-    render(<HomeDashboard role="owner" />);
+  it("greets by name and draws the ticket, weather, upcoming walks and open requests from /home", async () => {
+    mockFetchOwnerHome.mockResolvedValue(panel());
+    const { HomeShell } = await importHome();
+    render(<HomeShell role="owner" userId="owner-1" />);
 
-    expect(screen.getByRole("heading", { name: "Hola, dueño", level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Próximo paseo" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Clima en Pasto" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Hola, Camila", level: 1 })).toBeInTheDocument();
+    expect(mockFetchOwnerHome).toHaveBeenCalledWith("owner-1");
+    const ticket = screen.getByRole("region", { name: "Próximo paseo" });
+    expect(within(ticket).getByText("Luna")).toBeInTheDocument();
+    expect(within(ticket).getByText(/con Mateo/)).toBeInTheDocument();
+
+    const upcoming = screen.getByRole("region", { name: "Paseos programados" });
+    expect(within(upcoming).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(upcoming).getByText(/Paseador asignado/)).toBeInTheDocument();
+
+    expect(screen.getByRole("button", { name: "Ver ofertas de Max" })).toHaveTextContent("3 ofertas");
+    expect(await screen.findByText(/Mejor hora para pasear/)).toBeInTheDocument();
     expect(screen.getByTestId("city")).toBeInTheDocument();
   });
 
-  it("marks exactly one navigation item as the current page and moves it on click", async () => {
-    const { HomeDashboard } = await importHome();
+  it("shows the live card instead of the ticket while a walk is active", async () => {
+    mockFetchOwnerHome.mockResolvedValue(
+      panel({
+        activeWalk: { id: "w1", dogName: "Luna", walkerName: "Mateo", startedAt: null, minutesElapsed: 12, lastPosition: null },
+      }),
+    );
+    const { HomeShell } = await importHome();
+    render(<HomeShell role="owner" userId="owner-1" />);
+
+    const live = await screen.findByRole("region", { name: "Paseo en curso" });
+    expect(within(live).getByText(/Luna está paseando con Mateo/)).toBeInTheDocument();
+    expect(within(live).getByText("12 min")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Próximo paseo" })).not.toBeInTheDocument();
+  });
+
+  it("hides the weather card when the weather service is down", async () => {
+    mockFetchOwnerHome.mockResolvedValue(panel());
+    mockFetchWeather.mockRejectedValue(new Error("down"));
+    const { HomeShell } = await importHome();
+    render(<HomeShell role="owner" userId="owner-1" />);
+
+    await screen.findByRole("heading", { name: "Hola, Camila" });
+    await waitFor(() => expect(mockFetchWeather).toHaveBeenCalled());
+    expect(screen.queryByRole("region", { name: "Clima" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("explains a server failure with its error code and retries", async () => {
+    const { ApiError } = await import("../../apps/web/src/lib/apiError.js");
+    const failure = new ApiError("Something went wrong on our side.", 500);
+    failure.errorId = "abc123";
+    mockFetchOwnerHome.mockRejectedValueOnce(failure).mockResolvedValueOnce(panel());
     const user = userEvent.setup();
-    render(<HomeDashboard role="owner" />);
+    const { HomeShell } = await importHome();
+    render(<HomeShell role="owner" userId="owner-1" />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Algo falló de nuestro lado. Código: abc123");
+    await user.click(screen.getByRole("button", { name: "Reintentar" }));
+    expect(await screen.findByRole("heading", { name: "Hola, Camila" })).toBeInTheDocument();
+  });
+
+  it("signs out when /home answers 403", async () => {
+    const { ApiError } = await import("../../apps/web/src/lib/apiError.js");
+    mockFetchOwnerHome.mockRejectedValue(new ApiError("Forbidden", 403));
+    const onForbidden = vi.fn();
+    const { HomeShell } = await importHome();
+    render(<HomeShell role="owner" userId="owner-1" onForbidden={onForbidden} />);
+
+    await waitFor(() => expect(onForbidden).toHaveBeenCalled());
+  });
+
+  it("marks exactly one navigation item as the current page and moves it on click", async () => {
+    mockFetchOwnerHome.mockResolvedValue(panel());
+    const { HomeShell } = await importHome();
+    const user = userEvent.setup();
+    render(<HomeShell role="owner" userId="owner-1" />);
 
     const nav = screen.getByRole("navigation", { name: "Principal" });
     expect(within(nav).getAllByRole("button").map((button) => button.textContent)).toEqual([
@@ -67,51 +177,14 @@ describe("Home panel — owner", () => {
     expect(within(nav).getByRole("button", { name: "Inicio" })).not.toHaveAttribute("aria-current");
   });
 
-  it("starts at the suggested fare for 45 minutes and follows the chosen duration", async () => {
-    const { HomeDashboard } = await importHome();
+  it("opens Explorar from the empty-state call to action", async () => {
+    mockFetchOwnerHome.mockResolvedValue(panel({ nextWalk: null, upcoming: [], openRequests: [] }));
     const user = userEvent.setup();
-    render(<HomeDashboard role="owner" />);
+    const { HomeShell } = await importHome();
+    render(<HomeShell role="owner" userId="owner-1" screens={{ explore: <p>pantalla explorar</p> }} />);
 
-    const panel = screen.getByRole("region", { name: "Pedir un paseo" });
-    expect(within(panel).getByRole("radio", { name: "45 min" })).toBeChecked();
-    expect(within(panel).getByText("$15.000")).toBeInTheDocument();
-
-    await user.click(within(panel).getByRole("radio", { name: "60 min" }));
-    expect(within(panel).getByRole("radio", { name: "60 min" })).toBeChecked();
-    expect(within(panel).getByText("$20.000")).toBeInTheDocument();
-  });
-
-  it("changes the offer in steps of $1.000 and stops at the limits", async () => {
-    const { HomeDashboard } = await importHome();
-    const user = userEvent.setup();
-    render(<HomeDashboard role="owner" />);
-
-    const panel = screen.getByRole("region", { name: "Pedir un paseo" });
-    await user.click(within(panel).getByRole("button", { name: "Subir tarifa" }));
-    expect(within(panel).getByText("$16.000")).toBeInTheDocument();
-
-    for (let step = 0; step < 8; step += 1) {
-      await user.click(within(panel).getByRole("button", { name: "Bajar tarifa" }));
-    }
-    expect(within(panel).getByText("$8.000")).toBeInTheDocument();
-    expect(within(panel).getByRole("button", { name: "Bajar tarifa" })).toBeDisabled();
-  });
-
-  it("confirms the exact offer after Buscar cuidador and clears it when the offer changes", async () => {
-    const { HomeDashboard } = await importHome();
-    const user = userEvent.setup();
-    render(<HomeDashboard role="owner" />);
-
-    const panel = screen.getByRole("region", { name: "Pedir un paseo" });
-    expect(within(panel).queryByRole("status")).not.toBeInTheDocument();
-
-    await user.click(within(panel).getByRole("button", { name: "Buscar cuidador" }));
-    expect(within(panel).getByRole("status")).toHaveTextContent(
-      "Oferta de $15.000 por 45 min lista para enviar. (Vista previa: aún no hay cuidadores conectados.)",
-    );
-
-    await user.click(within(panel).getByRole("button", { name: "Subir tarifa" }));
-    expect(within(panel).queryByRole("status")).not.toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Pedir un paseo" }));
+    expect(screen.getByText("pantalla explorar")).toBeInTheDocument();
   });
 });
 
@@ -122,7 +195,7 @@ describe("Home panel — walker", () => {
     const { HomeDashboard } = await importHome();
     render(<HomeDashboard role="walker" />);
 
-    expect(screen.getByRole("heading", { name: "Hola, cuidador", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Hola, paseador", level: 1 })).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Pedir un paseo" })).not.toBeInTheDocument();
 
     const requests = screen.getByRole("region", { name: "Solicitudes" });

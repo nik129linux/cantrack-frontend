@@ -6,5 +6,7 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.{ts,tsx}"],
     setupFiles: ["./tests/setup.ts"],
+    // The first test of a file pays for importing the whole screen tree.
+    testTimeout: 15000,
   },
 });

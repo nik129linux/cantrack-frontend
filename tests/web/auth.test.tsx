@@ -103,7 +103,7 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
 
   it("shows the Supabase error message when signup fails", async () => {
     const { SignupScreen } = await importScreens();
-    const { ApiError } = await import("../../apps/web/src/lib/api.js");
+    const { ApiError } = await import("../../apps/web/src/lib/apiError.js");
     mockSignUp.mockRejectedValueOnce(new ApiError("User already registered", 400));
 
     const user = userEvent.setup();
@@ -145,7 +145,7 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
 
   it("shows an error on wrong login credentials", async () => {
     const { LoginScreen } = await importScreens();
-    const { ApiError } = await import("../../apps/web/src/lib/api.js");
+    const { ApiError } = await import("../../apps/web/src/lib/apiError.js");
     mockLogin.mockRejectedValueOnce(new ApiError("Invalid credentials", 401));
 
     const user = userEvent.setup();
@@ -222,7 +222,7 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
 
   it("explains an unverified email on login and offers to resend the link", async () => {
     const { LoginScreen } = await importScreens();
-    const { ApiError } = await import("../../apps/web/src/lib/api.js");
+    const { ApiError } = await import("../../apps/web/src/lib/apiError.js");
     mockLogin.mockRejectedValueOnce(new ApiError("Email not verified", 403));
     mockResend.mockResolvedValueOnce({ message: "ok" });
 
@@ -239,7 +239,7 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
 
   it("locks the form after too many failed logins", async () => {
     const { LoginScreen } = await importScreens();
-    const { ApiError } = await import("../../apps/web/src/lib/api.js");
+    const { ApiError } = await import("../../apps/web/src/lib/apiError.js");
     const tooMany = new ApiError("Too many attempts", 429);
     tooMany.retryAfter = 900;
     mockLogin.mockRejectedValueOnce(tooMany);

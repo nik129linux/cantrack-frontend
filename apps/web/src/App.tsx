@@ -207,11 +207,22 @@ function WalkerShell({ userId, onLogout }: { userId: string; onLogout: () => voi
   );
 }
 
-function OwnerShell({ onLogout }: { onLogout: () => void }) {
+function OwnerShell({
+  userId,
+  isPreview,
+  onLogout,
+}: {
+  userId: string;
+  isPreview: boolean;
+  onLogout: () => void;
+}) {
   return (
     <HomeShell
       role="owner"
+      userId={userId}
+      preview={isPreview}
       onLogout={onLogout}
+      onForbidden={onLogout}
       screens={{
         explore: <OwnerExploreScreen />,
         dogs: <OwnerDogsScreen />,
@@ -359,7 +370,7 @@ export function App() {
       ) : null}
       {authError !== null ? <p className="app-shell__alert" role="alert">{authError}</p> : null}
       {session === null ? <AuthShell /> : null}
-      {role === "owner" ? <OwnerShell onLogout={() => logout()} /> : null}
+      {role === "owner" ? <OwnerShell userId={userId} isPreview={preview !== null} onLogout={() => logout()} /> : null}
       {role === "walker" ? <WalkerShell userId={userId} onLogout={() => logout()} /> : null}
       {session !== null && !hasKnownRole ? (
         <div className="app-shell__panel app-shell__status" role="alert">
