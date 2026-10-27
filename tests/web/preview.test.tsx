@@ -64,7 +64,7 @@ describe("Development preview (?preview=...)", () => {
     const { App } = await importApp();
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "Hola, dueño", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Hola, Camila", level: 1 })).toBeInTheDocument();
     expect(mockGetSession).not.toHaveBeenCalled();
     expect(mockOnAuthStateChange).not.toHaveBeenCalled();
   });

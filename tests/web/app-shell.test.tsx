@@ -63,6 +63,20 @@ vi.mock("../../apps/web/src/lib/marketplace.js", async (importOriginal) => ({
   setAccountRole: vi.fn().mockResolvedValue({ role: "owner" }),
   recordOwnerConsent: vi.fn().mockResolvedValue(null),
   recordWalkerConsent: vi.fn().mockResolvedValue(null),
+  // Inicio and Explorar of the owner read the marketplace API.
+  fetchOwnerHome: vi.fn().mockResolvedValue({
+    greetingName: "Camila",
+    activeWalk: null,
+    nextWalk: null,
+    upcoming: [],
+    openRequests: [],
+    counts: { dogs: 0, walksDone: 0, openRequests: 0 },
+  }),
+  fetchWeather: vi.fn().mockRejectedValue(new Error("no weather in tests")),
+  fetchOwnerRequests: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
+  fetchFareSuggestion: vi.fn().mockResolvedValue({ suggestedCop: 15000, basis: "default", sampleSize: 0, minCop: 8000, stepCop: 1000 }),
+  fetchNearbyWalkers: vi.fn().mockResolvedValue({ count: 0, radiusKm: 2 }),
+  fetchOwnerWalks: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
 }));
 
 async function importApp() {
@@ -121,7 +135,7 @@ describe("App shell", () => {
     const { App } = await importApp();
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "Hola, dueño", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Hola, Camila", level: 1 })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /add dog/i })).not.toBeInTheDocument();
   });
 
@@ -275,7 +289,7 @@ describe("App shell — glass navigation", () => {
 
     await openTab(user, "Mis perros");
     await openTab(user, "Inicio");
-    expect(await screen.findByRole("heading", { name: "Hola, dueño", level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Hola, Camila", level: 1 })).toBeInTheDocument();
   });
 
   it("shows the clients screen on the walker's Clientes tab (S2)", async () => {
@@ -302,7 +316,7 @@ describe("App shell — glass navigation", () => {
     expect(await screen.findByRole("heading", { name: "Coming soon" })).toBeInTheDocument();
   });
 
-  it("shows the activity screen on the owner's Paseos tab (S3)", async () => {
+  it("shows Mis paseos on the owner's Paseos tab", async () => {
     mockGetSession.mockResolvedValue({ data: ownerSession() });
 
     const { App } = await importApp();
@@ -310,7 +324,7 @@ describe("App shell — glass navigation", () => {
     render(<App />);
 
     await openTab(user, "Paseos");
-    expect(await screen.findByRole("heading", { name: "Activity" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Mis paseos" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Coming soon" })).not.toBeInTheDocument();
   });
 
@@ -349,7 +363,7 @@ describe("App shell — glass navigation", () => {
 
     await openTab(user, "Explorar");
     expect(await screen.findByRole("heading", { name: "Explorar", level: 1 })).toBeInTheDocument();
-    expect(await screen.findByRole("heading", { name: "Mis ofertas" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Mis solicitudes" })).toBeInTheDocument();
   });
 
   it("shows the pickup-plan panel on the walker's Rutas tab (S2)", async () => {

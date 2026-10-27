@@ -110,3 +110,48 @@
 .leaflet-container {
   font-family: inherit;
 }
+
+/* Pins of MarkersMap: the walker live, the viewer, and the stops of a route. */
+.markers-pin {
+  background: none;
+  border: 0;
+}
+
+.markers-pin__dot {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  background: linear-gradient(180deg, #b9e35e, #86bb32);
+  box-shadow: 0 6px 12px rgb(15 50 100 / 35%);
+  transform: rotate(-45deg);
+}
+
+.markers-pin--live .markers-pin__dot {
+  background: linear-gradient(180deg, #6ec6ff, #2f8fe0);
+}
+
+.markers-pin--me .markers-pin__dot {
+  background: linear-gradient(180deg, #ffd27a, #f0a030);
+}
+
+.markers-pin--done .markers-pin__dot {
+  background: #b8c2b0;
+}
+
+.markers-pin--next .markers-pin__dot {
+  animation: markers-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes markers-pulse {
+  50% {
+    transform: rotate(-45deg) scale(1.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markers-pin--next .markers-pin__dot {
+    animation: none;
+  }
+}

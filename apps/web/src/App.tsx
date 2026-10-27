@@ -4,7 +4,7 @@ import { AuthShell } from "./auth/AuthShell.js";
 import { PENDING_CONSENT_KEY } from "./auth/AuthScreens.js";
 import { authCopy } from "./auth/messages.js";
 import { PENDING_ROLE_KEY } from "./auth/SocialAuth.js";
-import { OwnerActivityScreen } from "./owner/OwnerActivityScreen.js";
+import { OwnerWalksScreen } from "./owner/OwnerWalksScreen.js";
 import { OwnerExploreScreen } from "./owner/OwnerExploreScreen.js";
 import { OwnerDogsScreen } from "./owner/OwnerDogsScreen.js";
 import { WalkerClientsScreen } from "./walker/WalkerClientsScreen.js";
@@ -226,7 +226,7 @@ function OwnerShell({
       screens={{
         explore: (go) => <OwnerExploreScreen userId={userId} onPicked={() => go("walks")} />,
         dogs: <OwnerDogsScreen />,
-        walks: <OwnerActivityScreen />,
+        walks: (go) => <OwnerWalksScreen userId={userId} onRepeated={() => go("explore")} />,
         profile: <ComingSoon section="Profile" />,
       }}
     />
