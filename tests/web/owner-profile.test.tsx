@@ -1,14 +1,16 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-// Perfil (owner), docs/frontend/perfil.md + auth-role.md: profile form with the
-// brief's limits, avatar errors, consent line, change password, sign-out scopes,
-// export and the two-step account deletion.
+// Perfil (owner), on liquid glass: the hero (name, badges, stats, dogs) and
+// the collapsible sections — Tus datos, Recogida y acceso, Emergencias,
+// Pagos, Avisos, Paseadores favoritos and Privacidad y cuenta (consent,
+// password, sign-out, export, two-step deletion).
 
 const mockProfile = vi.fn();
 const mockSave = vi.fn();
+const mockFavorite = vi.fn();
 const mockAvatar = vi.fn();
 const mockConsent = vi.fn();
 const mockDelete = vi.fn();
@@ -20,6 +22,7 @@ vi.mock("../../apps/web/src/lib/supabase.js", () => ({ supabase: { auth: { setSe
 vi.mock("../../apps/web/src/lib/marketplace.js", () => ({
   fetchOwnerProfile: mockProfile,
   saveOwnerProfile: mockSave,
+  setFavoriteWalker: mockFavorite,
   uploadOwnerAvatar: mockAvatar,
   recordOwnerConsent: mockConsent,
   deleteOwnerAccount: mockDelete,
@@ -35,41 +38,78 @@ function profile(over: Record<string, unknown> = {}) {
   return {
     ownerId: "owner-1",
     email: "camila@gmail.com",
+    emailVerified: true,
+    memberSince: "2026-10-01T00:00:00+00:00",
     displayName: "Camila",
     phone: null,
     avatarUrl: null,
     home: null,
+    pickupNotes: null,
+    handoff: null,
+    emergency: null,
+    vet: null,
+    paymentMethod: null,
+    notifications: { walkStarted: true, report: true, walkDone: true, offers: false },
     consent: { version: "2026-10", at: "2026-10-25T15:00:00+00:00" },
     stats: { dogs: 2, walksDone: 7 },
+    dogs: [
+      { id: "dog-1", name: "Luna", breed: null },
+      { id: "dog-2", name: "Toby", breed: "Beagle" },
+    ],
+    walkers: [{ walkerId: "w-1", name: "María", walks: 3, favorite: false }],
     ...over,
   };
 }
 
-async function renderScreen() {
+async function renderScreen(onGo = vi.fn()) {
   const { OwnerProfileScreen } = await import("../../apps/web/src/owner/OwnerProfileScreen.js");
   const onSignOut = vi.fn();
   const user = userEvent.setup();
-  render(<OwnerProfileScreen userId="owner-1" onSignOut={onSignOut} />);
-  await screen.findByRole("heading", { name: "Perfil" });
-  return { user, onSignOut };
+  render(<OwnerProfileScreen userId="owner-1" onSignOut={onSignOut} onGo={onGo} />);
+  await screen.findByRole("region", { name: "Tu perfil" });
+  return { user, onSignOut, onGo };
+}
+
+function form(name: string) {
+  return within(screen.getByRole("form", { name }));
 }
 
 describe("Owner Perfil", () => {
   beforeEach(() => {
     cleanup();
-    for (const mock of [mockProfile, mockSave, mockAvatar, mockConsent, mockDelete, mockExport, mockChangePassword, mockSetSession]) {
+    for (const mock of [mockProfile, mockSave, mockFavorite, mockAvatar, mockConsent, mockDelete, mockExport, mockChangePassword, mockSetSession]) {
       mock.mockReset();
     }
     mockProfile.mockResolvedValue(profile());
   });
 
-  it("shows the profile, the stats and the consent line", async () => {
+  it("shows the hero: name, badges, stats, dogs and the consent line", async () => {
     await renderScreen();
 
-    expect(screen.getByText("camila@gmail.com")).toBeInTheDocument();
-    expect(screen.getByLabelText("Nombre")).toHaveValue("Camila");
-    expect(screen.getByText("2 perros · 7 paseos hechos")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Camila", level: 1 })).toBeInTheDocument();
+    expect(screen.getByText("Correo verificado")).toBeInTheDocument();
+    expect(screen.getByText("Sin teléfono")).toBeInTheDocument();
+    const stats = screen.getByText("Paseos hechos").closest("div")!;
+    expect(within(stats).getByText("7")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Luna/ })).toBeInTheDocument();
     expect(screen.getByText("Aceptaste la política de datos (2026-10) el 25 oct 2026")).toBeInTheDocument();
+  });
+
+  it("goes to Mis perros from the hero", async () => {
+    const { user, onGo } = await renderScreen();
+    await user.click(screen.getByRole("button", { name: "Ver mis perros" }));
+    expect(onGo).toHaveBeenCalledWith("dogs");
+  });
+
+  it("survives an answer without the newer sections", async () => {
+    mockProfile.mockResolvedValue({
+      ownerId: "owner-1", email: "camila@gmail.com", displayName: "Camila", phone: null,
+      avatarUrl: null, home: null, consent: null, stats: { dogs: 0, walksDone: 0 },
+    });
+    await renderScreen();
+
+    expect(screen.getByRole("button", { name: "Agrega tu primer perro" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Acepto el tratamiento de datos" })).toBeInTheDocument();
   });
 
   it("asks a brand-new owner to complete the profile", async () => {
@@ -80,29 +120,72 @@ describe("Owner Perfil", () => {
     expect(screen.getByRole("button", { name: "Acepto el tratamiento de datos" })).toBeInTheDocument();
   });
 
-  it("validates name and phone with the brief's copy before calling the API", async () => {
+  it("validates name and phone before calling the API", async () => {
     const { user } = await renderScreen();
-    await user.clear(screen.getByLabelText("Nombre"));
-    await user.type(screen.getByLabelText("Teléfono"), "abc");
-    await user.click(screen.getByRole("button", { name: "Guardar" }));
+    const data = form("Tus datos");
+    await user.clear(data.getByLabelText("Nombre"));
+    await user.type(data.getByLabelText("Teléfono"), "abc");
+    await user.click(data.getByRole("button", { name: "Guardar" }));
 
-    expect(screen.getByText("Escribe tu nombre (máx. 80)")).toBeInTheDocument();
-    expect(screen.getByText("Teléfono no válido")).toBeInTheDocument();
+    expect(await data.findByText("Escribe tu nombre (máx. 80) · Teléfono no válido")).toBeInTheDocument();
     expect(mockSave).not.toHaveBeenCalled();
   });
 
-  it("saves the profile", async () => {
+  it("saves only the data section", async () => {
     mockSave.mockResolvedValue(profile({ displayName: "Camila R", phone: "+57 300 123 4567" }));
     const { user } = await renderScreen();
-    await user.clear(screen.getByLabelText("Nombre"));
-    await user.type(screen.getByLabelText("Nombre"), "Camila R");
-    await user.type(screen.getByLabelText("Teléfono"), "+57 300 123 4567");
-    await user.click(screen.getByRole("button", { name: "Guardar" }));
+    const data = form("Tus datos");
+    await user.clear(data.getByLabelText("Nombre"));
+    await user.type(data.getByLabelText("Nombre"), "Camila R");
+    await user.type(data.getByLabelText("Teléfono"), "+57 300 123 4567");
+    await user.click(data.getByRole("button", { name: "Guardar" }));
 
     await waitFor(() =>
-      expect(mockSave).toHaveBeenCalledWith("owner-1", { displayName: "Camila R", phone: "+57 300 123 4567", home: null }),
+      expect(mockSave).toHaveBeenCalledWith("owner-1", { displayName: "Camila R", phone: "+57 300 123 4567" }),
     );
-    expect(await screen.findByText("Guardamos tu perfil.")).toBeInTheDocument();
+    expect(await screen.findByText("Guardamos tus datos.")).toBeInTheDocument();
+  });
+
+  it("saves the emergency contact and the vet", async () => {
+    mockSave.mockResolvedValue(profile({ emergency: { name: "Ana", relation: "Hermana", phone: "+57 301 000 0000" } }));
+    const { user } = await renderScreen();
+    const em = form("Emergencias");
+    await user.type(em.getByLabelText("Nombre del contacto"), "Ana");
+    await user.type(em.getByLabelText("Parentesco"), "Hermana");
+    await user.type(em.getAllByLabelText("Teléfono")[0]!, "+57 301 000 0000");
+    await user.type(em.getByLabelText("Clínica o veterinario"), "Vet Pasto");
+    await user.click(em.getByRole("button", { name: "Guardar" }));
+
+    await waitFor(() =>
+      expect(mockSave).toHaveBeenCalledWith("owner-1", {
+        emergency: { name: "Ana", relation: "Hermana", phone: "+57 301 000 0000" },
+        vet: { name: "Vet Pasto", phone: null },
+      }),
+    );
+  });
+
+  it("turns a notice off right away and quietly", async () => {
+    mockSave.mockResolvedValue(profile({ notifications: { walkStarted: false, report: true, walkDone: true, offers: false } }));
+    const { user } = await renderScreen();
+    await user.click(screen.getByRole("switch", { name: /Paseo iniciado/ }));
+
+    await waitFor(() =>
+      expect(mockSave).toHaveBeenCalledWith(
+        "owner-1",
+        { notifications: { walkStarted: false, report: true, walkDone: true, offers: false } },
+        true,
+      ),
+    );
+    expect(screen.getByRole("switch", { name: /Paseo iniciado/ })).not.toBeChecked();
+  });
+
+  it("marks a walker as favorite", async () => {
+    mockFavorite.mockResolvedValue(profile({ walkers: [{ walkerId: "w-1", name: "María", walks: 3, favorite: true }] }));
+    const { user } = await renderScreen();
+    await user.click(screen.getByRole("button", { name: "☆ Marcar favorito" }));
+
+    await waitFor(() => expect(mockFavorite).toHaveBeenCalledWith("owner-1", "w-1", true));
+    expect(await screen.findByRole("button", { name: "★ Favorito" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("explains the avatar upload errors", async () => {
@@ -116,6 +199,17 @@ describe("Owner Perfil", () => {
     mockAvatar.mockRejectedValueOnce(new ApiError("Unreadable image.", 400));
     await user.upload(screen.getByLabelText("Cambiar foto"), new File(["x"], "roto.png", { type: "image/png" }));
     expect(await screen.findByText("No pudimos leer esa imagen")).toBeInTheDocument();
+  });
+
+  it("shows a retry when the profile does not load", async () => {
+    const { ApiError } = await import("../../apps/web/src/lib/apiError.js");
+    mockProfile.mockRejectedValueOnce(new ApiError("boom", 500)).mockResolvedValue(profile());
+    const { OwnerProfileScreen } = await import("../../apps/web/src/owner/OwnerProfileScreen.js");
+    const user = userEvent.setup();
+    render(<OwnerProfileScreen userId="owner-1" onSignOut={vi.fn()} />);
+
+    await user.click(await screen.findByRole("button", { name: "Reintentar" }));
+    expect(await screen.findByRole("heading", { name: "Camila", level: 1 })).toBeInTheDocument();
   });
 
   it("changes the password and keeps this device signed in with the returned tokens", async () => {

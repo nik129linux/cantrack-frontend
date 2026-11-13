@@ -5,6 +5,8 @@ export type AvatarProps = {
    *  initials placeholder keeps the same accessible name — no broken images. */
   src?: string;
   alt: string;
+  /** Whose initials the placeholder shows; defaults to `alt`. */
+  name?: string;
   size?: number;
 };
 
@@ -18,7 +20,7 @@ function initialsOf(name: string): string {
 }
 
 /** Circular user/dog avatar with an accessible placeholder fallback. */
-export function Avatar({ src, alt, size = 48 }: AvatarProps) {
+export function Avatar({ src, alt, name, size = 48 }: AvatarProps) {
   const [imageBroken, setImageBroken] = useState(false);
   const style = { width: size, height: size };
 
@@ -42,7 +44,7 @@ export function Avatar({ src, alt, size = 48 }: AvatarProps) {
       aria-label={alt}
       style={style}
     >
-      {initialsOf(alt)}
+      {initialsOf(name !== undefined && name.trim() !== "" ? name : alt)}
     </span>
   );
 }

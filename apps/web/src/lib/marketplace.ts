@@ -36,11 +36,13 @@ export type ApiSession = {
 };
 
 export function signupAccount(input: {
+  fullName: string;
+  phone: string;
   email: string;
   password: string;
   role: AccountRole;
 }): Promise<{ user: unknown; session: ApiSession | null }> {
-  return request("/auth/signup", { method: "POST", body: json(input), anonymous: true });
+  return request("/auth/signup", { method: "POST", body: json(input), anonymous: true, mascot: false });
 }
 
 export function resendVerification(email: string): Promise<{ message: string }> {
@@ -48,6 +50,7 @@ export function resendVerification(email: string): Promise<{ message: string }> 
     method: "POST",
     body: json({ email }),
     anonymous: true,
+    mascot: false,
   });
 }
 
@@ -56,11 +59,12 @@ export function loginAccount(email: string, password: string): Promise<ApiSessio
     method: "POST",
     body: json({ email, password }),
     anonymous: true,
+    mascot: false, // the auth card runs its own dog
   });
 }
 
 export function setAccountRole(role: AccountRole): Promise<{ role: AccountRole }> {
-  return request("/auth/role", { method: "POST", body: json({ role }) });
+  return request("/auth/role", { method: "POST", body: json({ role }), mascot: false });
 }
 
 export function changePassword(
@@ -77,6 +81,7 @@ export function logoutAccount(scope?: "global"): Promise<void> {
   return request("/auth/logout", {
     method: "POST",
     body: json(scope === undefined ? {} : { scope }),
+    mascot: false, // App shows the farewell instead
   });
 }
 
@@ -85,6 +90,7 @@ export function requestPasswordReset(email: string): Promise<{ message: string }
     method: "POST",
     body: json({ email }),
     anonymous: true,
+    mascot: false,
   });
 }
 
@@ -211,7 +217,7 @@ export type ParsedRequest = {
 };
 
 export function parseRequestText(text: string): Promise<ParsedRequest> {
-  return request("/bidding/requests/parse", { method: "POST", body: json({ text }) });
+  return request("/bidding/requests/parse", { method: "POST", body: json({ text }), mascot: false });
 }
 
 export type Offer = {
@@ -226,7 +232,15 @@ export type Offer = {
   recentRating: number | null;
   allTimeRating: number | null;
   ratingCount: number;
+  /** What the walker wrote on Perfil; absent on older API responses. */
+  walkerBio?: string | null;
+  walkerArea?: string | null;
+  walkerExperienceYears?: number | null;
+  walkerDogSizes?: DogSize[];
+  walkerWalksDone?: number;
 };
+
+export type DogSize = "small" | "medium" | "large";
 
 /** `null` offers means 304: nothing changed since `etag`. */
 export type OffersPoll = { offers: Offer[] | null; etag: string | null };
@@ -239,6 +253,17 @@ export async function fetchOffers(requestId: string, etag?: string | null): Prom
     return { offers: null, etag: etag ?? null };
   }
   return { offers: (await response.json()) as Offer[], etag: response.headers.get("ETag") };
+}
+
+/** Raise an open request's fare; the same request reopens its 10-min offer window. */
+export function raiseRequest(
+  requestId: string,
+  priceCop: number,
+): Promise<{ id: string; priceCop: number; deadlineAt: string }> {
+  return request(`/bidding/requests/${enc(requestId)}/raise`, {
+    method: "POST",
+    body: json({ priceCop }),
+  });
 }
 
 export function pickOffer(requestId: string, offerId: string): Promise<unknown> {
@@ -286,7 +311,21 @@ export type WalkItem = {
   priceCop: number;
   canRate: boolean;
   hasReport: boolean;
+  /** From the walk report, once there is one. */
+  distanceKm?: number | null;
+  durationMin?: number | null;
+  /** The stars the owner gave, if rated. */
+  rating?: number | null;
 };
+
+export type WalkSummary = {
+  month: { walks: number; km: number; minutes: number };
+  counts: Record<WalkTab, number>;
+};
+
+export function fetchWalkSummary(ownerId: string): Promise<WalkSummary> {
+  return request(`/owners/${enc(ownerId)}/walks/summary`);
+}
 
 export function fetchOwnerWalks(
   ownerId: string,
@@ -312,14 +351,15 @@ export type WalkDetail = {
   id: string;
   status: string;
   dog: { id: string; name: string };
+  /** Always present; `id` is null until a walker is assigned. */
   walker: null | {
-    id: string;
+    id: string | null;
     name: string | null;
     allTimeRating: number | null;
     ratingCount: number;
   };
   requestedTime: string;
-  windowEnd: string;
+  windowEnd: string | null;
   durationHours: number;
   priceCop: number;
   offerCount: number;
@@ -379,6 +419,7 @@ export function sendGpsPoints(requestId: string, points: ReplayPoint[]): Promise
   return request(`/bidding/requests/${enc(requestId)}/gps`, {
     method: "POST",
     body: json({ points }),
+    mascot: false, // background sync
   });
 }
 
@@ -389,29 +430,66 @@ export function sendGpsPoints(requestId: string, points: ReplayPoint[]): Promise
 export type Consent = { version: string; at: string };
 export const CONSENT_VERSION = "2026-10";
 
+export type HandoffMethod = "in_person" | "doorman" | "key";
+export type PaymentMethod = "cash" | "nequi" | "card";
+export type EmergencyContact = { name: string; relation: string; phone: string };
+export type Vet = { name: string; phone: string | null };
+export type OwnerNotifications = { walkStarted: boolean; report: boolean; walkDone: boolean; offers: boolean };
+export type KnownWalker = { walkerId: string; name: string | null; walks: number; favorite: boolean };
+
 export type OwnerProfile = {
   ownerId: string;
   email: string;
+  emailVerified: boolean;
+  memberSince: string | null;
   displayName: string | null;
   phone: string | null;
   avatarUrl: string | null;
   home: null | { lat: number; lng: number; label: string };
+  pickupNotes: string | null;
+  handoff: HandoffMethod | null;
+  emergency: EmergencyContact | null;
+  vet: Vet | null;
+  paymentMethod: PaymentMethod | null;
+  notifications: OwnerNotifications;
   consent: Consent | null;
   stats: { dogs: number; walksDone: number };
+  dogs: { id: string; name: string; breed: string | null }[];
+  walkers: KnownWalker[];
 };
 
+/** Each profile section saves only its own fields; the rest keep their value. */
 export type OwnerProfileInput = {
-  displayName: string;
+  displayName?: string;
   phone?: string | null;
   home?: { lat: number; lng: number; label: string } | null;
+  pickupNotes?: string | null;
+  handoff?: HandoffMethod | null;
+  emergency?: EmergencyContact | null;
+  vet?: Vet | null;
+  paymentMethod?: PaymentMethod | null;
+  notifications?: OwnerNotifications;
 };
 
 export function fetchOwnerProfile(ownerId: string): Promise<OwnerProfile> {
   return request(`/owners/${enc(ownerId)}/profile`);
 }
 
-export function saveOwnerProfile(ownerId: string, input: OwnerProfileInput): Promise<OwnerProfile> {
-  return request(`/owners/${enc(ownerId)}/profile`, { method: "PUT", body: json(input) });
+/** `quiet` skips the "Guardando…" dog, for instant toggles. */
+export function saveOwnerProfile(ownerId: string, input: OwnerProfileInput, quiet = false): Promise<OwnerProfile> {
+  return request(`/owners/${enc(ownerId)}/profile`, {
+    method: "PUT",
+    body: json(input),
+    ...(quiet ? { mascot: false as const } : {}),
+  });
+}
+
+export function setFavoriteWalker(ownerId: string, walkerId: string, favorite: boolean): Promise<OwnerProfile> {
+  return request(`/owners/${enc(ownerId)}/favorites/${enc(walkerId)}`, {
+    method: "PUT",
+    body: json({ favorite }),
+    mascot: false,
+  });
 }
 
 function photoForm(photo: Blob): FormData {
@@ -432,7 +510,7 @@ export function recordOwnerConsent(ownerId: string): Promise<Consent> {
 }
 
 export function deleteOwnerAccount(ownerId: string): Promise<void> {
-  return request(`/owners/${enc(ownerId)}`, { method: "DELETE", body: json({ confirm: "DELETE" }) });
+  return request(`/owners/${enc(ownerId)}`, { method: "DELETE", body: json({ confirm: "DELETE" }), mascot: "Eliminando tu cuenta…" });
 }
 
 /** Download the JSON export as a Blob plus the file name the server chose. */
@@ -458,6 +536,19 @@ export type WalkerHomeWalk = {
   requestedTime: string;
   durationHours: number;
   priceCop: number;
+  /** True when the walk's slot already passed and it was never started. */
+  stale?: boolean;
+};
+
+/** An open request near the walker, previewed on Inicio (no owner data). */
+export type WalkerNearbyCard = {
+  id: string;
+  dogName: string | null;
+  requestedTime: string;
+  durationHours: number;
+  priceCop: number;
+  distanceKm: number;
+  offered: boolean;
 };
 
 export type WalkerHome = {
@@ -468,11 +559,18 @@ export type WalkerHome = {
   today: { walks: number; grossCop: number; commissionCop: number; netCop: number };
   rating: { average: number | null; count: number };
   openNearby: number;
+  /** The closest few open requests; the full list lives in Solicitudes. */
+  nearby?: WalkerNearbyCard[];
   pendingOffers: number;
 };
 
 export function fetchWalkerHome(walkerId: string): Promise<WalkerHome> {
   return request(`/walkers/${enc(walkerId)}/home`);
+}
+
+/** Read the online switch (a heartbeat newer than 120 s). */
+export function fetchAvailability(walkerId: string): Promise<{ online: boolean; updatedAt: string | null }> {
+  return request(`/walkers/${enc(walkerId)}/availability`);
 }
 
 export function setAvailability(
@@ -487,7 +585,7 @@ export function setAvailability(
 }
 
 export function sendHeartbeat(lat: number, lng: number): Promise<unknown> {
-  return request("/walker-position", { method: "PUT", body: json({ lat, lng }) });
+  return request("/walker-position", { method: "PUT", body: json({ lat, lng }), mascot: false });
 }
 
 export type EarningsPeriod = "day" | "week" | "month";
@@ -503,10 +601,23 @@ export type Earnings = {
   commissionCop: number;
   netCop: number;
   byDay: { date: string; walks: number; grossCop: number; netCop: number }[];
+  /** The period right before this one (yesterday, last week, last month). */
+  previous?: { walks: number; netCop: number };
+  bestDay?: { date: string; netCop: number } | null;
+  avgPerWalkCop?: number;
+  /** The walker's weekly net goal, if they set one. */
+  goalCop?: number | null;
+  /** Only for `period=day`: that day's finished walks. */
+  dayWalks?: { id: string; dogName: string | null; requestedTime: string; netCop: number }[] | null;
 };
 
 export function fetchEarnings(walkerId: string, period: EarningsPeriod): Promise<Earnings> {
   return request(`/walkers/${enc(walkerId)}/earnings${query({ period })}`);
+}
+
+/** Save the walker's weekly net goal (10.000–5.000.000 COP). */
+export function setWalkerGoal(walkerId: string, goalCop: number): Promise<{ goalCop: number }> {
+  return request(`/walkers/${enc(walkerId)}/goal`, { method: "PUT", body: json({ goalCop }) });
 }
 
 // ---------------------------------------------------------------------------
@@ -589,6 +700,36 @@ export type DayRouteStop = {
   legKm: number;
   legMinutes: number;
   legSource: "graph" | "straight" | "start";
+  durationHours?: number;
+  /** What the walker keeps after the 10 % commission. */
+  netCop?: number;
+  /** Only while the walk is assigned or in progress. */
+  ownerName?: string | null;
+  ownerPhone?: string | null;
+};
+
+/** An assigned walk whose slot already ended (any day). */
+export type OverdueWalk = {
+  requestId: string;
+  dogName: string | null;
+  requestedTime: string;
+  durationHours: number;
+  pickupLat?: number | null;
+  pickupLng?: number | null;
+};
+
+/** The walk in progress right now (any day), with its check-in time. */
+export type ActiveWalk = {
+  requestId: string;
+  dogName: string | null;
+  requestedTime: string;
+  durationHours: number;
+  startedAt: string | null;
+  netCop: number;
+  ownerName: string | null;
+  ownerPhone: string | null;
+  pickupLat: number | null;
+  pickupLng: number | null;
 };
 
 export type DayRoute = {
@@ -598,10 +739,57 @@ export type DayRoute = {
   totalKm: number;
   totalMinutes: number;
   nextStopId: string | null;
+  overdue?: OverdueWalk[];
+  active?: ActiveWalk | null;
 };
+
+export type WalkTransition = { id: string; status: string; walkerId: string | null };
+
+/** Start a won walk (assigned → in_walk). */
+export function checkInWalk(requestId: string): Promise<WalkTransition> {
+  return request(`/bidding/requests/${enc(requestId)}/check-in`, { method: "POST" });
+}
+
+/** Finish the walk in progress (in_walk → done). */
+export function checkOutWalk(requestId: string): Promise<WalkTransition> {
+  return request(`/bidding/requests/${enc(requestId)}/check-out`, { method: "POST" });
+}
+
+/** Give back an assigned walk: it reopens for bidding and costs one cancellation. */
+export function walkerCancelWalk(requestId: string): Promise<WalkTransition> {
+  return request(`/bidding/requests/${enc(requestId)}/walker-cancel`, { method: "POST" });
+}
 
 export function fetchDayRoute(walkerId: string, date?: string): Promise<DayRoute> {
   return request(`/walkers/${enc(walkerId)}/route${query({ date })}`);
+}
+
+/** One turn on the way to a pickup. */
+export type NavStep = {
+  text: string;
+  distanceM: number;
+  /** Where this step starts on the route's `geometry`. */
+  startIndex: number;
+};
+
+/** The way to a pickup, drawn on our own map. */
+export type WalkingRoute = {
+  /** "osrm" follows the streets; "straight" is the direct line (router unavailable). */
+  source: "osrm" | "straight";
+  distanceKm: number;
+  minutes: number;
+  /** `[[lat, lng], ...]` along the streets. */
+  geometry: [number, number][];
+  steps: NavStep[];
+};
+
+export function fetchWalkingRoute(
+  walkerId: string,
+  from: { lat: number; lng: number },
+  to: { lat: number; lng: number },
+): Promise<WalkingRoute> {
+  const params = { fromLat: from.lat, fromLng: from.lng, toLat: to.lat, toLng: to.lng };
+  return request(`/walkers/${enc(walkerId)}/walking-route${query(params)}`, { mascot: false });
 }
 
 export type DogCareProfile = {
@@ -622,18 +810,45 @@ export type Client = {
   walksDone: number;
   upcoming: number;
   lastWalkAt: string | null;
+  /** The soonest walk still to come, for the "Por venir" order. */
+  nextWalkAt?: string | null;
   grossCop: number;
+};
+
+/** What the walker needs at the owner's door; only sent while a walk is live. */
+export type ClientCare = {
+  pickupNotes: string | null;
+  handoff: "in_person" | "doorman" | "key" | null;
+  emergencyName: string | null;
+  emergencyRelation: string | null;
+  emergencyPhone: string | null;
+  vetName: string | null;
+  vetPhone: string | null;
+};
+
+export type ClientDog = {
+  id: string;
+  name: string | null;
+  breed?: string | null;
+  /** What the owner wrote about the dog. */
+  notes?: string | null;
+  profile: DogCareProfile | null;
+  /** The walker's own private note. */
+  note?: string | null;
 };
 
 export type ClientDetail = Omit<Client, "dogs"> & {
   phone: string | null;
-  dogs: { id: string; name: string | null; profile: DogCareProfile | null }[];
+  ownerAvatarUrl?: string | null;
+  care?: ClientCare | null;
+  dogs: ClientDog[];
   walks: {
     id: string;
     dogName: string | null;
     status: "assigned" | "in_walk" | "done";
     requestedTime: string;
     priceCop: number;
+    rating?: number | null;
   }[];
 };
 
@@ -645,6 +860,19 @@ export function fetchClientDetail(walkerId: string, ownerId: string): Promise<Cl
   return request(`/walkers/${enc(walkerId)}/clients/${enc(ownerId)}`);
 }
 
+/** Save the walker's private note on a client's dog; null clears it. */
+export function saveDogNote(
+  walkerId: string,
+  ownerId: string,
+  dogId: string,
+  note: string | null,
+): Promise<{ note: string | null }> {
+  return request(
+    `/walkers/${enc(walkerId)}/clients/${enc(ownerId)}/dogs/${enc(dogId)}/note`,
+    { method: "PUT", body: json({ note }) },
+  );
+}
+
 export type WalkerAccountProfile = {
   walkerId: string;
   email: string;
@@ -654,8 +882,25 @@ export type WalkerAccountProfile = {
   pricePerWalk: number | null;
   phone: string | null;
   avatarUrl: string | null;
+  experienceYears?: number | null;
+  dogSizes?: DogSize[];
+  memberSince?: string | null;
   consent: Consent | null;
-  stats: { walksDone: number; rating: { average: number | null; count: number } };
+  stats: {
+    walksDone: number;
+    hoursWalked?: number;
+    clients?: number;
+    /** `breakdown[i]` counts the ratings that round to i + 1 stars. */
+    rating: { average: number | null; count: number; breakdown?: number[] };
+  };
+  reviews?: WalkerReview[];
+};
+
+export type WalkerReview = {
+  rating: number;
+  at: string;
+  dogName: string | null;
+  ownerName: string | null;
 };
 
 export type WalkerAccountProfileInput = {
@@ -664,6 +909,8 @@ export type WalkerAccountProfileInput = {
   serviceArea: string | null;
   pricePerWalk: number;
   phone: string | null;
+  experienceYears?: number | null;
+  dogSizes?: DogSize[];
 };
 
 export function fetchWalkerAccountProfile(walkerId: string): Promise<WalkerAccountProfile> {
@@ -704,5 +951,5 @@ export function fetchWalkerWalks(walkerId: string, tab: WalkTab): Promise<Walker
 }
 
 export function deleteWalkerAccount(walkerId: string): Promise<void> {
-  return request(`/walkers/${enc(walkerId)}`, { method: "DELETE", body: json({ confirm: "DELETE" }) });
+  return request(`/walkers/${enc(walkerId)}`, { method: "DELETE", body: json({ confirm: "DELETE" }), mascot: "Eliminando tu cuenta…" });
 }

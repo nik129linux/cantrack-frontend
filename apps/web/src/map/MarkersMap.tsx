@@ -22,6 +22,17 @@ type MarkersMapProps = {
   connect?: boolean;
   label: string;
   loadLeaflet?: () => Promise<LeafletModule>;
+  /** Fly to this point whenever `key` changes ("Centrar en mí"). */
+  focus?: { lat: number; lng: number; key: number; zoom?: number } | null;
+  /**
+   * Frame every marker whenever they change (the default). Navigation turns it
+   * off: a position arriving each second would keep yanking the map around.
+   */
+  autoFit?: boolean;
+  /** Draw the joining line as a dashed trail instead of a solid route. */
+  dashed?: boolean;
+  /** `[[lat, lng], ...]` drawn as the way to follow, instead of joining the pins. */
+  path?: [number, number][] | null;
 };
 
 async function loadLeafletFromPackage(): Promise<LeafletModule> {
@@ -32,7 +43,16 @@ async function loadLeafletFromPackage(): Promise<LeafletModule> {
  * Read-only OpenStreetMap view (Leaflet) with labelled pins: the walker's live
  * position, or the stops of a day route. Leaflet loads on demand.
  */
-export function MarkersMap({ markers, connect = false, label, loadLeaflet = loadLeafletFromPackage }: MarkersMapProps) {
+export function MarkersMap({
+  markers,
+  connect = false,
+  label,
+  loadLeaflet = loadLeafletFromPackage,
+  focus = null,
+  autoFit = true,
+  dashed = false,
+  path = null,
+}: MarkersMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const layerRef = useRef<LayerGroup | null>(null);
@@ -106,15 +126,41 @@ export function MarkersMap({ markers, connect = false, label, loadLeaflet = load
         .bindTooltip(marker.label)
         .addTo(layer);
     }
-    if (connect && points.length > 1) {
-      L.polyline(points, { color: "#2f7d4f", weight: 4, opacity: 0.7 }).addTo(layer);
+    // A routed path wins over joining the pins: it is the way he must walk.
+    let line: [number, number][] | null = null;
+    if (path !== null && path.length > 1) {
+      line = path;
+    } else if (connect && points.length > 1) {
+      line = points;
+    }
+    if (line !== null) {
+      L.polyline(line, {
+        color: "#2f7d4f",
+        weight: 5,
+        opacity: 0.8,
+        ...(dashed && path === null ? { dashArray: "10 10" } : {}),
+      }).addTo(layer);
+    }
+    if (!autoFit) {
+      return;
     }
     if (points.length === 1) {
       map.setView(points[0]!, 16);
     } else if (points.length > 1) {
       map.fitBounds(L.latLngBounds(points), { padding: [28, 28], maxZoom: 16 });
     }
-  }, [markers, connect, ready]);
+  }, [markers, connect, ready, autoFit, dashed, path]);
+
+  const focusKey = focus?.key;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || map === null || focus === null) {
+      return;
+    }
+    map.setView([focus.lat, focus.lng], focus.zoom ?? 16);
+    // Only a new request to center moves the map, not every re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusKey, ready]);
 
   return (
     <section className="pickup-map glass-map" aria-label={label}>

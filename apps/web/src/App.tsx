@@ -21,6 +21,7 @@ import {
 import { readPreviewSession } from "./lib/preview.js";
 import { supabase } from "./lib/supabase.js";
 import { DogLoader } from "./ui/DogLoader.js";
+import { beginFarewell } from "./mascot/mascotBus.js";
 import { HomeShell } from "./home/HomeDashboard.js";
 import { Button } from "./ui/Button.js";
 import "./ui/tokens.css";
@@ -82,8 +83,10 @@ function WalkerShell({
         requests: (go) => (
           <WalkerRequestsScreen userId={userId} onGoHome={() => go("home")} onGoRoutes={() => go("routes")} />
         ),
-        clients: <WalkerClientsScreen userId={userId} />,
-        routes: <WalkerRoutesScreen userId={userId} />,
+        clients: (go) => <WalkerClientsScreen userId={userId} onGoRoutes={() => go("routes")} />,
+        routes: (go) => (
+          <WalkerRoutesScreen userId={userId} preview={isPreview} onGoHome={() => go("home")} onGoRequests={() => go("requests")} />
+        ),
         profile: <WalkerProfileScreen userId={userId} onSignOut={onSignOut} />,
       }}
     />
@@ -109,10 +112,10 @@ function OwnerShell({
       onLogout={onLogout}
       onForbidden={onLogout}
       screens={{
-        explore: (go) => <OwnerExploreScreen userId={userId} onPicked={() => go("walks")} />,
-        dogs: <OwnerDogsScreen />,
-        walks: (go) => <OwnerWalksScreen userId={userId} onRepeated={() => go("explore")} />,
-        profile: <OwnerProfileScreen userId={userId} onSignOut={onSignOut} />,
+        explore: (go) => <OwnerExploreScreen userId={userId} onPicked={() => go("walks")} onGo={go} />,
+        dogs: (go) => <OwnerDogsScreen onGo={go} />,
+        walks: (go) => <OwnerWalksScreen userId={userId} onRepeated={() => go("explore")} onGo={go} />,
+        profile: (go) => <OwnerProfileScreen userId={userId} onSignOut={onSignOut} onGo={go} />,
       }}
     />
   );
@@ -193,7 +196,13 @@ export function App() {
     void setAccountRole(pendingRole)
       .then(() => supabase.auth.refreshSession())
       .catch(() => setAuthError("No pudimos activar tu rol. Cierra sesión e inténtalo de nuevo."))
-      .finally(() => window.localStorage.removeItem(PENDING_ROLE_KEY));
+      .finally(() => {
+        try {
+          window.localStorage.removeItem(PENDING_ROLE_KEY);
+        } catch {
+          // Storage blocked: nothing to clean up.
+        }
+      });
   }, [session, sessionRole, preview]);
 
   // Right after the first login, send the consent ticked on the signup form (Ley 1581).
@@ -222,7 +231,7 @@ export function App() {
   if (session === undefined) {
     return (
       <div ref={shellRef} className="app-shell app-shell--centered" data-cantrack-app-shell>
-        <DogLoader label="Cargando CanTrack…" />
+        <DogLoader label="Cargando CanTrack…" pose="run" />
       </div>
     );
   }
@@ -235,9 +244,15 @@ export function App() {
       window.location.assign(window.location.pathname);
       return;
     }
+    // The dog waves over a frosted screen while the session really closes.
+    const farewellDone = beginFarewell();
     void logoutAccount(scope)
       .catch(() => undefined)
-      .finally(() => void supabase.auth.signOut({ scope: "local" }));
+      .finally(() => {
+        void Promise.resolve(supabase.auth.signOut({ scope: "local" }))
+          .catch(() => undefined)
+          .finally(farewellDone);
+      });
   };
 
   return (

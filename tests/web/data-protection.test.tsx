@@ -46,7 +46,10 @@ describe("Data-protection consent at sign up (Issue #23, Ley 1581)", () => {
     render(<SignupScreen />);
 
     await user.type(screen.getByLabelText(/correo electrónico/i), "walker@example.com");
-    await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/^contraseña$/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/confirmar contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/nombre completo/i), "Ana Pérez");
+    await user.type(screen.getByLabelText(/celular/i), "3001234567");
     await user.click(screen.getByLabelText(/paseador/i));
     // Do NOT check the consent checkbox
     await user.click(screen.getByRole("button", { name: /crear cuenta/i }));
@@ -65,7 +68,10 @@ describe("Data-protection consent at sign up (Issue #23, Ley 1581)", () => {
     render(<SignupScreen />);
 
     await user.type(screen.getByLabelText(/correo electrónico/i), "walker@example.com");
-    await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/^contraseña$/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/confirmar contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/nombre completo/i), "Ana Pérez");
+    await user.type(screen.getByLabelText(/celular/i), "3001234567");
     await user.click(screen.getByLabelText(/paseador/i));
     // Check the consent checkbox
     await user.click(screen.getByLabelText(/data protection|personal data|tratamiento de datos/i));

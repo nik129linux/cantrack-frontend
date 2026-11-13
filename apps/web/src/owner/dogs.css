@@ -1,0 +1,366 @@
+﻿/* Only the controls and layout specific to Mis perros; surfaces come from home.css. */
+.dogs,
+.dogs__sidebar,
+.dogs__form,
+.dogs__ficha {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.dogs__layout {
+  display: grid;
+  gap: 14px;
+  align-items: start;
+}
+
+/* Inicio places `.home__greeting` and `.home__list` in named grid areas
+   (home.css, 900px+, selectors as strong as `.home__grid:not(:has(…)) .home__list`).
+   Inside Mis perros they are plain grid items, so this reset needs one more class. */
+.home__grid .dogs > .home__greeting,
+.home__grid .dogs .dogs__sidebar > .home__list {
+  grid-area: auto;
+}
+
+.dogs__layout--selected .dogs__sidebar {
+  display: none;
+}
+
+.dogs__card {
+  padding: 18px 16px;
+}
+
+.dogs__ficha {
+  align-content: start;
+}
+
+.dogs__dog-row {
+  width: 100%;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dogs__dog-row[aria-current="true"] {
+  background: rgb(166 212 74 / 26%);
+  box-shadow: inset 0 0 0 1px var(--lime-text);
+}
+
+.dogs__dog-row:hover {
+  background: rgb(255 255 255 / 20%);
+}
+
+.dogs__initial {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.dogs__initial--large {
+  width: 64px;
+  height: 64px;
+  font-size: 2rem;
+}
+
+.dogs__identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.dogs__identity > div {
+  min-width: 0;
+}
+
+.dogs__identity h2 {
+  margin-bottom: 4px;
+}
+
+.dogs__identity p {
+  margin: 0 0 8px;
+}
+
+.dogs__chips {
+  margin-top: 6px;
+}
+
+.dogs__chip {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.dogs__chip[data-ready="true"] {
+  color: var(--lime-text);
+  background: rgb(166 212 74 / 18%);
+}
+
+.dogs__field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.dogs__field label,
+.dogs__label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.dogs__input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 12px;
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 14%);
+  color: #fff;
+  font: inherit;
+  transition:
+    border-color 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out);
+}
+
+.dogs__input::placeholder {
+  color: rgb(255 255 255 / 60%);
+}
+
+.dogs__input:focus {
+  outline: none;
+  border-color: var(--lime-text);
+  box-shadow: 0 0 0 4px rgb(166 212 74 / 25%);
+}
+
+textarea.dogs__input {
+  resize: vertical;
+}
+
+.dogs__input[type="file"] {
+  font-size: 13px;
+}
+
+.dogs__input::file-selector-button {
+  min-height: 44px;
+  margin-right: 8px;
+  border: 0;
+  border-radius: 10px;
+  padding: 8px;
+  background: rgb(255 255 255 / 18%);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dogs__counter {
+  text-align: right;
+  font-size: 12px;
+  color: rgb(255 255 255 / 80%);
+}
+
+.dogs__section {
+  border-radius: 20px;
+  min-width: 0;
+}
+
+.dogs__summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 12px;
+  list-style: none;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.dogs__summary::-webkit-details-marker {
+  display: none;
+}
+
+.dogs__summary-value {
+  margin-left: auto;
+  max-width: 42%;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: right;
+  color: rgb(255 255 255 / 80%);
+}
+
+.dogs__chevron {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--lime-text);
+  border-bottom: 2px solid var(--lime-text);
+  transform: rotate(45deg);
+  transition: transform 180ms var(--ease-out);
+}
+
+.dogs__section[open] > summary .dogs__chevron {
+  transform: rotate(225deg);
+}
+
+.dogs__body {
+  padding: 0 12px 14px;
+}
+
+.dogs__body > p:first-child {
+  margin-top: 0;
+}
+
+.dogs__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.dogs__button {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 10%);
+  color: var(--lime-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dogs__back {
+  justify-self: start;
+}
+
+.dogs__danger {
+  background: rgb(126 23 32 / 55%);
+  color: #fff;
+  border-color: rgb(255 190 190 / 65%);
+}
+
+.dogs button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.dogs :is(button, summary, input):focus-visible {
+  outline: 3px solid var(--lime-text);
+  outline-offset: 3px;
+}
+
+.dogs__error {
+  padding: 10px;
+  border-radius: 12px;
+  background: rgb(126 23 32 / 55%);
+  color: #fff;
+}
+
+.dogs__switch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.dogs__switch input {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.dogs__switch > span {
+  box-sizing: border-box;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 24%);
+}
+
+.dogs__switch > span::before {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  content: "";
+  transition: transform 180ms var(--ease-out);
+}
+
+.dogs__switch input:checked + span {
+  background: var(--lime-deep);
+}
+
+.dogs__switch input:checked + span::before {
+  transform: translateX(18px);
+}
+
+.dogs__switch input:focus-visible + span {
+  outline: 3px solid var(--lime-text);
+  outline-offset: 3px;
+}
+
+.dogs__suggestion {
+  padding: 12px;
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 16px;
+}
+
+.dogs__diary {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.dogs :is(p, strong, .dogs__summary-value, .home__row-text) {
+  overflow-wrap: anywhere;
+}
+
+.dogs .home__segment {
+  font-size: 13px;
+  padding: 4px;
+}
+
+.dogs__placeholder {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .dogs__placeholder {
+    display: block;
+  }
+
+  .dogs__layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
+  }
+
+  .dogs__layout--selected .dogs__sidebar {
+    display: grid;
+  }
+
+  .dogs__back {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dogs *,
+  .dogs *::before {
+    transition: none;
+  }
+}

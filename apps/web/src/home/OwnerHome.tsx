@@ -58,7 +58,7 @@ function CardLoader({ label }: { label: string }) {
   );
 }
 
-function WeatherCard({ preview }: { preview: boolean }) {
+export function WeatherCard({ preview }: { preview: boolean }) {
   const point = readHomePoint();
   const weather = useFetched<Weather>(
     () => (preview ? Promise.resolve(PREVIEW_WEATHER) : fetchWeather(point.lat, point.lng)),

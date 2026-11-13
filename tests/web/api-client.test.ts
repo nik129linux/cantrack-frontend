@@ -52,7 +52,9 @@ describe("API client", () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({ id: "dog-1", name: "Firulais" }));
     const { enrollPhotos } = await api();
     const files = [photo("a.jpg"), photo("b.jpg"), photo("c.jpg")];
-    await enrollPhotos("dog-1", files);
+    await expect(enrollPhotos("dog-1", files)).resolves.toEqual({
+      id: "dog-1", name: "Firulais", profile: null, hasPhotos: true,
+    });
 
     const [url, init] = mockFetch.mock.calls[0];
     expect(String(url)).toMatch(/\/dogs\/dog-1\/photos$/);
@@ -63,6 +65,140 @@ describe("API client", () => {
     const headers = new Headers(init.headers);
     expect(headers.has("Content-Type")).toBe(false);
     expect(headers.get("Authorization")).toBe("Bearer tok-123");
+  });
+
+  it("fetchDogs maps the profile and photo status without exposing raw row fields", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse([{
+      id: "dog-1", name: "Firulais", breed: "Mix", notes: "Friendly",
+      owner_id: "owner-1", embedding: Array(512).fill(0.1),
+      profile: {
+        size: "medium", temperament: "calm", energy: "low", leash_trained: true,
+        allergies: "Chicken", medical_notes: "Medication", vet_contact: "Vet",
+        emergency_contact: "Owner",
+      },
+    }]));
+    const { fetchDogs } = await api();
+    const dogs = await fetchDogs();
+    expect(dogs).toEqual([{
+      id: "dog-1", name: "Firulais", breed: "Mix", notes: "Friendly", hasPhotos: true,
+      profile: {
+        size: "medium", temperament: "calm", energy: "low", leashTrained: true,
+        allergies: "Chicken", medicalNotes: "Medication", vetContact: "Vet",
+        emergencyContact: "Owner",
+      },
+    }]);
+    expect(dogs[0]).not.toHaveProperty("embedding");
+    expect(dogs[0]).not.toHaveProperty("owner_id");
+  });
+
+  it.each([
+    [null, false], [undefined, false], [[], false], [Array(512).fill(0), true],
+    [JSON.stringify(Array(512).fill(0)), true],
+  ])("fetchDogs maps embedding %j to hasPhotos %s with a null profile", async (embedding, hasPhotos) => {
+    mockFetch.mockResolvedValueOnce(jsonResponse([{
+      id: "dog-1", name: "Firulais", profile: null, embedding,
+    }]));
+    const { fetchDogs } = await api();
+    await expect(fetchDogs()).resolves.toEqual([{
+      id: "dog-1", name: "Firulais", profile: null, hasPhotos,
+    }]);
+  });
+
+  it("fetchDogs keeps incomplete profiles and defaults missing fields", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse([
+      { id: "dog-1", name: "Firulais", profile: { medical_notes: "Medication" } },
+      { id: "dog-2", name: "Rex" },
+    ]));
+    const { fetchDogs } = await api();
+    const dogs = await fetchDogs();
+    expect(dogs[0].profile).toEqual({
+      size: "", temperament: "", energy: "", leashTrained: false,
+      allergies: null, medicalNotes: "Medication", vetContact: null, emergencyContact: null,
+    });
+    expect(dogs[1].profile).toBeNull();
+  });
+
+  it.each([null, { size: "small", leash_trained: false }])(
+    "createDog sends JSON and maps the row with no photos and profile %j", async (profile) => {
+      const input = { name: "Firulais", breed: "Mix", notes: "Friendly" };
+      mockFetch.mockResolvedValueOnce(jsonResponse({
+        id: "dog-1", ...input, profile, embedding: [1],
+      }, 201));
+      const { createDog } = await api();
+      const dog = await createDog(input);
+      expect(dog).toEqual({
+        id: "dog-1", ...input, hasPhotos: false,
+        profile: profile === null ? null : {
+          size: "small", temperament: "", energy: "", leashTrained: false,
+          allergies: null, medicalNotes: null, vetContact: null, emergencyContact: null,
+        },
+      });
+      const [url, init] = mockFetch.mock.calls[0];
+      expect(String(url)).toMatch(/\/dogs$/);
+      expect(init.method).toBe("POST");
+      expect(init.body).toBe(JSON.stringify(input));
+    },
+  );
+
+  it.each([null, Array(512).fill(0.1)])("updateDog sends the exact PATCH body and maps the row", async (embedding) => {
+    const patch = { name: "Rex", breed: null, notes: null };
+    mockFetch.mockResolvedValueOnce(jsonResponse({ id: "a/b c", ...patch, embedding }));
+    const { updateDog } = await api();
+    await expect(updateDog("a/b c", patch)).resolves.toEqual({
+      id: "a/b c", ...patch, profile: null, hasPhotos: embedding !== null,
+    });
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(String(url)).toMatch(/\/dogs\/a%2Fb%20c$/);
+    expect(init.method).toBe("PATCH");
+    expect(init.body).toBe(JSON.stringify(patch));
+    expect(new Headers(init.headers).get("Content-Type")).toBe("application/json");
+  });
+
+  it("deleteDog sends DELETE and discards the response message", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ message: "Dog deleted." }));
+    const { deleteDog } = await api();
+    await expect(deleteDog("a/b c")).resolves.toBeUndefined();
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(String(url)).toMatch(/\/dogs\/a%2Fb%20c$/);
+    expect(init.method).toBe("DELETE");
+    expect(init.body).toBeUndefined();
+  });
+
+  it("suggestDogTraits sends one image named dog.jpg without showing the mascot", async () => {
+    const traits = { breed: "Mix", size: "medium" };
+    mockFetch.mockResolvedValueOnce(jsonResponse(traits));
+    const { suggestDogTraits } = await api();
+    const { subscribe } = await import("../../apps/web/src/mascot/mascotBus.js");
+    const listener = vi.fn();
+    const unsubscribe = subscribe(listener);
+    try {
+      const blob = new Blob(["bytes"], { type: "image/jpeg" });
+      await expect(suggestDogTraits("a/b c", blob)).resolves.toEqual(traits);
+      const [url, init] = mockFetch.mock.calls[0];
+      expect(String(url)).toMatch(/\/dogs\/a%2Fb%20c\/suggest$/);
+      expect(init.method).toBe("POST");
+      expect(init.body).toBeInstanceOf(FormData);
+      const entries = Array.from((init.body as FormData).entries());
+      expect(entries).toHaveLength(1);
+      expect(entries[0][0]).toBe("image");
+      const image = entries[0][1] as File;
+      expect(image).toBeInstanceOf(File);
+      expect(image.name).toBe("dog.jpg");
+      expect(image.size).toBe(blob.size);
+      expect(image.type).toBe(blob.type);
+      expect(new Headers(init.headers).has("Content-Type")).toBe(false);
+      expect(listener).not.toHaveBeenCalled();
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it("suggestDogTraits surfaces rate limiting as ApiError with status 429", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ detail: "Rate limited." }, 429));
+    const { suggestDogTraits, ApiError } = await api();
+    const result = suggestDogTraits("dog-1", photo("ref.jpg"));
+    await expect(result).rejects.toBeInstanceOf(ApiError);
+    await expect(result).rejects.toMatchObject({ status: 429, message: "Rate limited." });
   });
 
   it("checkIn uploads the photo as multipart field 'image' to the route's checkin endpoint", async () => {

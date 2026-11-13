@@ -1,0 +1,286 @@
+/* Solicitudes (walker): inDrive-style request cards on the dark glass. */
+
+.wreq__card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 26px;
+}
+
+.wreq__card[data-status="offered"] {
+  box-shadow: 0 24px 54px rgb(15 50 100 / 28%), inset 0 0 0 1.5px rgb(185 227 94 / 55%);
+}
+
+.wreq__top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.wreq__main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.wreq__dog {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  line-height: 1.1;
+}
+
+.wreq__owner {
+  overflow: hidden;
+  color: rgb(255 255 255 / 78%);
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wreq__fare {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  text-align: right;
+}
+
+.wreq__fare strong {
+  color: var(--lime-text, #cdf07a);
+  font-family: var(--display);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.wreq__clock {
+  color: rgb(255 255 255 / 78%);
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.wreq__clock[data-urgent] {
+  color: #ffd666;
+}
+
+/* Countdown ring around the dog's initial */
+
+.wreq__ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+}
+
+.wreq__ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.wreq__ring-track {
+  fill: none;
+  stroke: rgb(255 255 255 / 16%);
+  stroke-width: 4;
+}
+
+.wreq__ring-fill {
+  fill: none;
+  stroke: var(--lime-bright, #b9e35e);
+  stroke-linecap: round;
+  stroke-width: 4;
+  transition: stroke-dashoffset 1s linear, stroke 300ms var(--ease-out);
+}
+
+.wreq__ring[data-urgent] .wreq__ring-fill {
+  stroke: #ffc44d;
+}
+
+.wreq__ring-initial {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--lime-bright, #b9e35e), var(--lime-deep, #86bb32));
+  color: var(--lime-ink, #10260f);
+  font-family: var(--display);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+/* Map */
+
+.wreq__map-toggle {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--lime-text, #cdf07a);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.wreq__map-toggle:focus-visible {
+  outline: 3px solid var(--lime-text, #cdf07a);
+  outline-offset: 2px;
+}
+
+.wreq__map {
+  overflow: hidden;
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 22%);
+}
+
+.wreq__map .pickup-map {
+  margin: 0;
+}
+
+.wreq__map .pickup-map__canvas {
+  height: 200px;
+  min-height: 200px;
+}
+
+/* Actions */
+
+.wreq__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wreq__actions .wg__primary {
+  flex: 1 1 180px;
+}
+
+.wreq__sent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.wreq__sent .wg__ghost {
+  margin-left: auto;
+}
+
+.wreq__counter {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 20px;
+  background: rgb(10 24 40 / 40%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 14%);
+}
+
+.wreq__stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+
+.wreq__counter-value {
+  min-width: 7ch;
+  font-family: var(--display);
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* Offline card and banners */
+
+.wreq__offline {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  background: linear-gradient(145deg, rgb(40 52 66 / 75%), rgb(22 30 40 / 66%));
+}
+
+.wreq__offline .wg__warn {
+  grid-column: 1 / -1;
+}
+
+.wreq__offline-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #9aa6b2;
+  box-shadow: 0 0 0 4px rgb(154 166 178 / 25%);
+}
+
+.wreq__won {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  animation: wg-rise 360ms var(--ease-out) both;
+}
+
+/* Mis ofertas */
+
+.wreq__offers {
+  display: grid;
+  gap: 12px;
+}
+
+.wreq__offer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 24px;
+}
+
+.wreq__offer[data-status="won"] {
+  box-shadow: 0 24px 54px rgb(15 50 100 / 28%), inset 0 0 0 1.5px rgb(185 227 94 / 65%);
+}
+
+.wreq__offer[data-status="lost"] {
+  opacity: 0.8;
+}
+
+@media (max-width: 520px) {
+  .wreq__top {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .wreq__fare {
+    grid-column: 1 / -1;
+    grid-template-columns: auto auto;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .wreq__offline {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .wreq__offline .wg__primary {
+    grid-column: 1 / -1;
+  }
+
+  .wreq__offer {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .wreq__offer .wg__primary {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wreq__ring-fill,
+  .wreq__won {
+    transition: none;
+    animation: none;
+  }
+}

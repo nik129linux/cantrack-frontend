@@ -75,7 +75,7 @@ describe("Development preview (?preview=...)", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { name: "Hola, Mateo", level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "Conectado" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "En línea" })).toBeChecked();
     expect(mockGetSession).not.toHaveBeenCalled();
   });
 

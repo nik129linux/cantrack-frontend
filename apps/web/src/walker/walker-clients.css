@@ -1,0 +1,350 @@
+/* Clientes (walker): the owner list and one client's file. */
+
+/* Toolbar ------------------------------------------------------------------- */
+
+.wclients__toolbar {
+  display: grid;
+  gap: 10px;
+}
+
+.wclients__search {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(10 24 40 / 55%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 22%);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.wclients__search::placeholder {
+  color: rgb(255 255 255 / 60%);
+}
+
+.wclients__search:focus-visible {
+  outline: 3px solid var(--lime-text, #cdf07a);
+  outline-offset: 2px;
+}
+
+/* List ---------------------------------------------------------------------- */
+
+.wclients__card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 26px;
+}
+
+.wclients__main {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.wclients__name {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  line-height: 1.1;
+}
+
+.wclients__side {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.wclients__gross {
+  color: var(--lime-text, #cdf07a);
+  font-family: var(--display);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+/* Detail -------------------------------------------------------------------- */
+
+.wclients__back {
+  justify-self: start;
+}
+
+.wclients__hero {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+/* The shared Avatar keeps the light owner theme; on glass it wears lime. */
+.wclients__hero .ui-avatar {
+  box-shadow: 0 8px 20px rgb(5 25 50 / 30%), inset 0 0 0 2px rgb(255 255 255 / 35%);
+}
+
+.wclients__hero .ui-img-fallback {
+  background: linear-gradient(180deg, var(--lime-bright, #b9e35e), var(--lime-deep, #86bb32));
+  color: var(--lime-ink, #10260f);
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.wclients__hero-main {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.wclients__hero-name {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.8rem;
+  line-height: 1.1;
+}
+
+.wclients__gate {
+  padding: 0 4px;
+}
+
+.wclients__call {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.wclients__call svg {
+  width: 16px;
+  height: 16px;
+}
+
+.wclients__next {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.wclients__eyebrow {
+  margin: 0 0 2px;
+  color: var(--lime-text, #cdf07a);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wclients__pickup {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.wclients__pickup svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  color: var(--lime-text, #cdf07a);
+}
+
+.wclients__contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgb(255 255 255 / 14%);
+  font-size: 14px;
+}
+
+/* Care card ------------------------------------------------------------------ */
+
+.wclients__care-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.wclients__care-head h3 {
+  margin: 0;
+}
+
+.wclients__care-head p {
+  margin: 2px 0 0;
+}
+
+.wclients__owner-note {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgb(10 24 40 / 40%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 14%);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.wclients__facts {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.wclients__alert {
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: rgb(255 196 77 / 18%);
+  box-shadow: inset 0 0 0 1px rgb(255 196 77 / 45%);
+  color: #ffd666;
+  font-weight: 800;
+}
+
+/* Private note --------------------------------------------------------------- */
+
+.wclients__note {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgb(255 255 255 / 14%);
+}
+
+.wclients__note-label {
+  font-family: var(--display);
+  font-size: 1.05rem;
+}
+
+.wclients__note .wg__muted {
+  margin: -4px 0 0;
+  font-size: 13px;
+}
+
+.wclients__textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 18px;
+  background: rgb(10 24 40 / 50%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 22%);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.wclients__textarea::placeholder {
+  color: rgb(255 255 255 / 50%);
+}
+
+.wclients__textarea:focus-visible {
+  outline: 3px solid var(--lime-text, #cdf07a);
+  outline-offset: 2px;
+}
+
+.wclients__note-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.wclients__note-foot .wg__primary {
+  margin-left: auto;
+}
+
+.wclients__saved {
+  color: var(--lime-text, #cdf07a);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* Walk history ---------------------------------------------------------------- */
+
+.wclients__walks {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wclients__walks li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 12%);
+}
+
+.wclients__walks li:last-child {
+  border-bottom: 0;
+}
+
+.wclients__walk-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.wclients__walk-main strong {
+  font-family: var(--display);
+  font-size: 1.1rem;
+}
+
+.wclients__stars {
+  color: #ffd666;
+  font-size: 15px;
+  letter-spacing: 2px;
+}
+
+/* Phone ------------------------------------------------------------------------ */
+
+@media (min-width: 900px) {
+  .wclients__toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .wclients__card,
+  .wclients__hero {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .wclients__side {
+    grid-column: 1 / -1;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    justify-items: stretch;
+  }
+
+  .wclients__side .wg__primary {
+    justify-self: end;
+    min-width: 96px;
+  }
+
+  .wclients__hero .wclients__call {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+
+  .wclients__next {
+    grid-template-columns: 1fr;
+  }
+}

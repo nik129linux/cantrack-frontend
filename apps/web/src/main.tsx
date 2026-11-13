@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App.js";
 import { CityPreview } from "./city/CityPreview.js";
 import { HomeDashboard } from "./home/HomeDashboard.js";
+import { GlobalDogLoader } from "./mascot/GlobalDogLoader.js";
 
 const rootElement = document.getElementById("root");
 
@@ -30,5 +31,7 @@ function Root() {
 createRoot(rootElement).render(
   <StrictMode>
     <Root />
+    {/* The one global mascot: saves, errors and the logout goodbye. */}
+    <GlobalDogLoader />
   </StrictMode>,
 );

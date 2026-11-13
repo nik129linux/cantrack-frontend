@@ -1,130 +1,221 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
-import { cleanup } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { Dog, DogProfile } from "../../apps/web/src/lib/api.js";
 
-// S1: the 8-field questionnaire (dogs.profile) gets an additive editor inside
-// the existing OwnerDogsScreen — a "Questionnaire" action per dog opening
-// labeled fields (3 selects, 1 checkbox, 4 optional texts) that saves through
-// saveDogProfile(dogId, profile) with the exact DTO. The existing enrollment
-// flow and its tests (tests/web/owner-dogs.test.tsx) are untouched; this file
-// only covers the new behavior.
-
-const mockFetchDogs = vi.fn();
-const mockCreateDog = vi.fn();
-const mockEnrollPhotos = vi.fn();
-const mockSaveDogProfile = vi.fn();
-vi.mock("../../apps/web/src/lib/api.js", () => ({
-  fetchDogs: mockFetchDogs,
-  createDog: mockCreateDog,
-  enrollPhotos: mockEnrollPhotos,
-  saveDogProfile: mockSaveDogProfile,
+const api = vi.hoisted(() => ({
+  fetchDogs: vi.fn(),
+  createDog: vi.fn(),
+  updateDog: vi.fn(),
+  deleteDog: vi.fn(),
+  enrollPhotos: vi.fn(),
+  suggestDogTraits: vi.fn(),
+  saveDogProfile: vi.fn(),
+  fetchTimeline: vi.fn(),
 }));
+vi.mock("../../apps/web/src/lib/api.js", () => api);
+vi.mock("../../apps/web/src/lib/image.js", () => ({ resizeImage: vi.fn(async (file: File) => file) }));
+import { OwnerDogsScreen } from "../../apps/web/src/owner/OwnerDogsScreen.js";
 
-async function importScreen() {
-  return import("../../apps/web/src/owner/OwnerDogsScreen.js");
+const profile: DogProfile = {
+  size: "medium",
+  temperament: "shy",
+  energy: "low",
+  leashTrained: true,
+  allergies: "Pollo",
+  medicalNotes: "Cuidar la cadera",
+  vetContact: "Vet Laura",
+  emergencyContact: "Ana",
+};
+const dog: Dog = {
+  id: "dog-1",
+  name: "Luna",
+  breed: "Criollo",
+  notes: "Evitar motos",
+  hasPhotos: false,
+  profile,
+};
+afterEach(cleanup);
+beforeEach(() => {
+  vi.resetAllMocks();
+  api.fetchDogs.mockResolvedValue([dog]);
+  api.updateDog.mockImplementation(async (_id, patch) => ({ ...dog, ...patch }));
+  api.saveDogProfile.mockImplementation(async (_id, value) => value);
+  api.fetchTimeline.mockResolvedValue([]);
+  api.deleteDog.mockResolvedValue(undefined);
+});
+
+async function openFicha(section?: string) {
+  const user = userEvent.setup();
+  const onGo = vi.fn();
+  render(<OwnerDogsScreen onGo={onGo} />);
+  await user.click(await screen.findByRole("button", { name: /Luna/ }));
+  if (section) {
+    await user.click(screen.getByText(section, { selector: "summary > span" }));
+  }
+  return { user, onGo };
 }
 
-afterEach(cleanup);
-
-describe("Owner dogs screen — questionnaire (S1)", () => {
-  beforeEach(() => {
-    mockFetchDogs.mockReset();
-    mockCreateDog.mockReset();
-    mockEnrollPhotos.mockReset();
-    mockSaveDogProfile.mockReset();
-    mockFetchDogs.mockResolvedValue([{ id: "dog-1", name: "Firulais", breed: "Mixed" }]);
-  });
-
-  it("opens a questionnaire panel with the 8 labeled fields and exact options", async () => {
-    const { OwnerDogsScreen } = await importScreen();
-    const user = userEvent.setup();
-    render(<OwnerDogsScreen />);
-
-    await user.click(await screen.findByRole("button", { name: "Questionnaire" }));
-
-    expect(
-      await screen.findByRole("heading", { name: "Questionnaire for Firulais" }),
-    ).toBeInTheDocument();
-
-    const size = screen.getByLabelText("Size");
-    expect(within(size).getAllByRole("option").map((o) => o.textContent)).toEqual([
-      "", "small", "medium", "large",
-    ]);
-    const temperament = screen.getByLabelText("Temperament");
-    expect(within(temperament).getAllByRole("option").map((o) => o.textContent)).toEqual([
-      "", "friendly", "shy", "reactive",
-    ]);
-    const energy = screen.getByLabelText("Energy");
-    expect(within(energy).getAllByRole("option").map((o) => o.textContent)).toEqual([
-      "", "low", "medium", "high",
-    ]);
-    expect(screen.getByLabelText("Leash trained")).toBeInTheDocument();
-    expect(screen.getByLabelText("Allergies")).toBeInTheDocument();
-    expect(screen.getByLabelText("Medical notes")).toBeInTheDocument();
-    expect(screen.getByLabelText("Vet contact")).toBeInTheDocument();
-    expect(screen.getByLabelText("Emergency contact")).toBeInTheDocument();
-  });
-
-  it("saves the exact questionnaire DTO (empty texts become null)", async () => {
-    mockSaveDogProfile.mockResolvedValue({});
-    const { OwnerDogsScreen } = await importScreen();
-    const user = userEvent.setup();
-    render(<OwnerDogsScreen />);
-
-    await user.click(await screen.findByRole("button", { name: "Questionnaire" }));
-    await user.selectOptions(await screen.findByLabelText("Size"), "medium");
-    await user.selectOptions(screen.getByLabelText("Temperament"), "friendly");
-    await user.selectOptions(screen.getByLabelText("Energy"), "high");
-    await user.click(screen.getByLabelText("Leash trained"));
-    await user.type(screen.getByLabelText("Medical notes"), "Hip dysplasia");
-    await user.type(screen.getByLabelText("Vet contact"), "Vet Laura");
-    await user.type(screen.getByLabelText("Emergency contact"), "Ana");
-    await user.click(screen.getByRole("button", { name: "Save questionnaire" }));
-
+describe("Datos", () => {
+  it.each([false, true])("PATCHes the exact body (empty optional fields: %s)", async (empty) => {
+    const { user } = await openFicha();
+    const name = screen.getByLabelText("Nombre");
+    const breed = screen.getByLabelText("Raza");
+    const notes = screen.getByLabelText("Indicaciones para el paseador");
+    expect(name).toHaveValue("Luna");
+    expect(breed).toHaveValue("Criollo");
+    expect(notes).toHaveValue("Evitar motos");
+    expect(notes).toHaveAttribute("placeholder", "Le dan miedo las motos; no lo sueltes en el parque…");
+    await user.clear(name);
+    await user.type(name, " Luna nueva ");
+    await user.clear(breed);
+    await user.type(breed, empty ? " " : " Labrador ");
+    await user.clear(notes);
+    await user.type(notes, empty ? " " : " No soltar ");
+    const form = name.closest("form")!;
+    await user.click(within(form).getByRole("button", { name: "Guardar" }));
     await waitFor(() =>
-      expect(mockSaveDogProfile).toHaveBeenCalledWith("dog-1", {
-        size: "medium",
+      expect(api.updateDog).toHaveBeenCalledExactlyOnceWith("dog-1", {
+        name: "Luna nueva",
+        breed: empty ? null : "Labrador",
+        notes: empty ? null : "No soltar",
+      }),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent("Datos guardados");
+  });
+});
+
+describe("Carácter y salud", () => {
+  it("prefills exactly six controls and routes contact editing to Perfil", async () => {
+    const { user, onGo } = await openFicha("Carácter y salud");
+    const form = screen.getByLabelText("Alergias").closest("form")!;
+    const fields = within(form);
+    expect(fields.getAllByRole("radiogroup")).toHaveLength(3);
+    expect(fields.getAllByRole("switch")).toHaveLength(1);
+    expect(fields.getAllByRole("textbox")).toHaveLength(2);
+    expect(form.querySelectorAll("input, textarea, select")).toHaveLength(3);
+    for (const [group, saved] of [
+      ["Tamaño", "Mediano"],
+      ["Temperamento", "Tímido"],
+      ["Energía", "Baja"],
+    ]) {
+      expect(
+        within(fields.getByRole("radiogroup", { name: group })).getByRole("radio", { name: saved }),
+      ).toHaveAttribute("aria-checked", "true");
+    }
+    expect(fields.getByRole("switch", { name: "Camina bien con correa" })).toBeChecked();
+    expect(fields.getByLabelText("Alergias")).toHaveValue("Pollo");
+    expect(fields.getByLabelText("Notas médicas")).toHaveValue("Cuidar la cadera");
+    expect(fields.getByLabelText("Alergias")).toHaveAttribute("maxlength", "500");
+    expect(fields.getByLabelText("Notas médicas")).toHaveAttribute("maxlength", "500");
+    expect(
+      fields.queryByRole("textbox", { name: /veterinario|emergencia|vet|emergency/i }),
+    ).not.toBeInTheDocument();
+    await user.click(fields.getByRole("button", { name: "Ir a Perfil" }));
+    expect(onGo).toHaveBeenCalledExactlyOnceWith("profile");
+  });
+
+  it("saves six fields and preserves the stored contacts unchanged", async () => {
+    const { user } = await openFicha("Carácter y salud");
+    await user.click(screen.getByRole("radio", { name: "Grande" }));
+    await user.click(screen.getByRole("radio", { name: "Amigable" }));
+    await user.click(screen.getByRole("radio", { name: "Alta" }));
+    await user.click(screen.getByRole("switch"));
+    await user.clear(screen.getByLabelText("Alergias"));
+    await user.type(screen.getByLabelText("Alergias"), " ");
+    await user.clear(screen.getByLabelText("Notas médicas"));
+    await user.type(screen.getByLabelText("Notas médicas"), " Revisar cadera ");
+    const form = screen.getByLabelText("Alergias").closest("form")!;
+    await user.click(within(form).getByRole("button", { name: "Guardar" }));
+    await waitFor(() =>
+      expect(api.saveDogProfile).toHaveBeenCalledExactlyOnceWith("dog-1", {
+        size: "large",
         temperament: "friendly",
         energy: "high",
-        leashTrained: true,
+        leashTrained: false,
         allergies: null,
-        medicalNotes: "Hip dysplasia",
+        medicalNotes: "Revisar cadera",
         vetContact: "Vet Laura",
         emergencyContact: "Ana",
       }),
     );
-    expect(await screen.findByRole("status")).toHaveTextContent("Questionnaire saved.");
+    expect(await screen.findByRole("status")).toHaveTextContent("Ficha guardada");
   });
 
-  it("rejects saving without size, temperament and energy", async () => {
-    const { OwnerDogsScreen } = await importScreen();
-    const user = userEvent.setup();
-    render(<OwnerDogsScreen />);
+  it("validates the required choices", async () => {
+    api.fetchDogs.mockResolvedValue([{ ...dog, profile: null }]);
+    const { user } = await openFicha("Carácter y salud");
+    const form = screen.getByLabelText("Alergias").closest("form")!;
+    await user.click(within(form).getByRole("button", { name: "Guardar" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Elige tamaño, temperamento y energía");
+    expect(api.saveDogProfile).not.toHaveBeenCalled();
+  });
 
-    await user.click(await screen.findByRole("button", { name: "Questionnaire" }));
-    await user.click(await screen.findByRole("button", { name: "Save questionnaire" }));
+  it("shows an API save error", async () => {
+    api.saveDogProfile.mockRejectedValue(new Error("Dog not found."));
+    const { user } = await openFicha("Carácter y salud");
+    const form = screen.getByLabelText("Alergias").closest("form")!;
+    await user.click(within(form).getByRole("button", { name: "Guardar" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("No encontramos a ese perro.");
+  });
 
+  it("moves selection and focus with ArrowRight in a radiogroup", async () => {
+    const { user } = await openFicha("Carácter y salud");
+    screen.getByRole("radio", { name: "Mediano" }).focus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("radio", { name: "Grande" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "Grande" })).toHaveFocus();
+    expect(screen.getByRole("radio", { name: "Mediano" })).toHaveAttribute("aria-checked", "false");
+  });
+});
+
+describe("Diario and deletion", () => {
+  it("fetches only when opened, shows at most three entries and caches on reopening", async () => {
+    api.fetchTimeline.mockResolvedValue(
+      [1, 2, 3, 4].map((id) => ({
+        type: "walk",
+        requestId: String(id),
+        walkerId: String(id),
+        walkerName: "Paseador " + id,
+        requestedTime: "2026-11-12T12:00:00Z",
+        status: "completed",
+      })),
+    );
+    const { user, onGo } = await openFicha();
+    expect(api.fetchTimeline).not.toHaveBeenCalled();
+    await user.click(screen.getByText("Diario"));
+    expect(await screen.findByText("Paseo con Paseador 1")).toBeInTheDocument();
+    const diary = within(screen.getByText("Diario").closest("details")!);
+    expect(diary.getAllByRole("listitem")).toHaveLength(3);
+    expect(diary.queryByText("Paseo con Paseador 4")).not.toBeInTheDocument();
+    await user.click(screen.getByText("Diario"));
+    await user.click(screen.getByText("Diario"));
+    expect(api.fetchTimeline).toHaveBeenCalledExactlyOnceWith("dog-1", "desc");
+    await user.click(diary.getByRole("button", { name: "Ver todos en Paseos" }));
+    expect(onGo).toHaveBeenCalledExactlyOnceWith("walks");
+  });
+
+  it("shows the empty diary", async () => {
+    await openFicha("Diario");
+    expect(await screen.findByText("Todavía no hay paseos de Luna")).toBeInTheDocument();
+  });
+
+  it("requires confirmation, allows cancellation, and removes the deleted dog", async () => {
+    const { user } = await openFicha("Eliminar perro");
+    await user.click(screen.getByRole("button", { name: "Eliminar perro" }));
+    expect(screen.getByText("¿Eliminar a Luna? Esta acción no se puede deshacer.")).toBeInTheDocument();
+    expect(api.deleteDog).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(screen.queryByRole("button", { name: "Sí, eliminar" })).not.toBeInTheDocument();
+    expect(api.deleteDog).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Eliminar perro" }));
+    await user.click(screen.getByRole("button", { name: "Sí, eliminar" }));
     expect(
-      await screen.findByText("Choose size, temperament and energy."),
+      await screen.findByText("Aún no tienes perros. Agrega el primero para pedir paseos."),
     ).toBeInTheDocument();
-    expect(mockSaveDogProfile).not.toHaveBeenCalled();
-  });
-
-  it("shows the API error inline when saving fails", async () => {
-    mockSaveDogProfile.mockRejectedValue(new Error("Dog not found."));
-    const { OwnerDogsScreen } = await importScreen();
-    const user = userEvent.setup();
-    render(<OwnerDogsScreen />);
-
-    await user.click(await screen.findByRole("button", { name: "Questionnaire" }));
-    await user.selectOptions(await screen.findByLabelText("Size"), "small");
-    await user.selectOptions(screen.getByLabelText("Temperament"), "shy");
-    await user.selectOptions(screen.getByLabelText("Energy"), "low");
-    await user.click(screen.getByRole("button", { name: "Save questionnaire" }));
-
-    expect(await screen.findByRole("alert")).toHaveTextContent("Dog not found.");
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(api.deleteDog).toHaveBeenCalledExactlyOnceWith("dog-1");
+    expect(screen.queryByRole("button", { name: /Luna/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Ficha de Luna" })).not.toBeInTheDocument();
   });
 });

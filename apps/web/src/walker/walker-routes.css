@@ -1,0 +1,581 @@
+/* Rutas (walker): the walk in progress, late walks, the map and the stops. */
+
+.wroute__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.wroute__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.wroute__link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.wroute__dog {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.45rem;
+  line-height: 1.1;
+}
+
+.wroute__eyebrow {
+  margin: 0;
+  color: var(--lime-text, #cdf07a);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Day picker ----------------------------------------------------------------- */
+
+.wroute__days {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgb(10 24 40 / 55%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 18%);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.wroute__days .wg__round {
+  width: 40px;
+  height: 40px;
+  background: rgb(255 255 255 / 10%);
+  box-shadow: none;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.wroute__days .wg__filter {
+  min-height: 40px;
+  padding: 6px 16px;
+  background: none;
+  box-shadow: none;
+}
+
+.wroute__days .wg__filter[aria-pressed="true"] {
+  background: var(--lime-bright, #b9e35e);
+  color: var(--lime-ink, #10260f);
+}
+
+.wroute__day {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.wroute__day::first-letter {
+  text-transform: uppercase;
+}
+
+/* Notices --------------------------------------------------------------------- */
+
+.wroute__notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  animation: wg-rise 360ms var(--ease-out) both;
+}
+
+.wroute__notice span {
+  flex: 1 1 200px;
+  font-size: 1.05rem;
+}
+
+.wroute__notice--info span {
+  font-size: 14px;
+}
+
+/* Confirm --------------------------------------------------------------------- */
+
+.wroute__confirm {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgb(60 20 20 / 45%);
+  box-shadow: inset 0 0 0 1px rgb(255 140 140 / 35%);
+}
+
+.wroute__confirm p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+/* Walk in progress ------------------------------------------------------------- */
+
+.glass.wroute__active {
+  box-shadow: 0 24px 54px rgb(15 50 100 / 28%), inset 0 0 0 1.5px rgb(185 227 94 / 60%);
+}
+
+.wroute__active-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wroute__gps {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--lime-text, #cdf07a);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.wroute__gps .wg__dot {
+  background: var(--lime-bright, #b9e35e);
+}
+
+.wroute__gps .wg__dot::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  content: "";
+  animation: wg-pulse 1.8s var(--ease-out) infinite;
+}
+
+.wroute__gps[data-state="blocked"] {
+  color: #ffd666;
+}
+
+.wroute__gps[data-state="blocked"] .wg__dot {
+  background: #ffc44d;
+}
+
+.wroute__gps[data-state="blocked"] .wg__dot::after {
+  animation: none;
+}
+
+.wroute__active-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+}
+
+.wroute__active-info {
+  display: grid;
+  gap: 6px;
+}
+
+.wroute__timer {
+  position: relative;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  width: 138px;
+  height: 138px;
+  text-align: center;
+}
+
+.wroute__timer svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.wroute__timer-track {
+  fill: none;
+  stroke: rgb(255 255 255 / 15%);
+  stroke-width: 8;
+}
+
+.wroute__timer-fill {
+  fill: none;
+  stroke: var(--lime-bright, #b9e35e);
+  stroke-linecap: round;
+  stroke-width: 8;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.wroute__timer[data-done] .wroute__timer-fill {
+  stroke: #ffc44d;
+}
+
+.wroute__timer strong {
+  font-family: var(--display);
+  font-size: 1.85rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.wroute__timer span {
+  color: rgb(255 255 255 / 75%);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* Late walks -------------------------------------------------------------------- */
+
+.glass.wroute__overdue {
+  background: linear-gradient(145deg, rgb(80 58 14 / 70%), rgb(40 30 10 / 62%));
+  box-shadow: 0 24px 54px rgb(15 50 100 / 22%), inset 0 0 0 1.5px rgb(255 196 77 / 50%);
+}
+
+.wroute__late {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgb(0 0 0 / 18%);
+}
+
+.wroute__late-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wroute__late-main strong {
+  font-family: var(--display);
+  font-size: 1.2rem;
+}
+
+/* Map + side column ------------------------------------------------------------------ */
+
+.wroute__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+}
+
+.wroute__map {
+  position: sticky;
+  top: 14px;
+  overflow: hidden;
+  border-radius: 26px;
+  box-shadow: 0 24px 54px rgb(15 50 100 / 28%), inset 0 0 0 1px rgb(255 255 255 / 22%);
+}
+
+.wroute__map .pickup-map {
+  margin: 0;
+}
+
+.wroute__map .pickup-map__canvas {
+  height: 520px;
+  min-height: 520px;
+}
+
+.wroute__center {
+  /* Bottom left: the OpenStreetMap credit sits on the right and must stay readable. */
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgb(16 30 46 / 82%);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.wroute__center svg {
+  width: 16px;
+  height: 16px;
+}
+
+.wroute__side {
+  display: grid;
+  gap: 14px;
+}
+
+.wroute__next-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wroute__pay {
+  color: var(--lime-text, #cdf07a);
+  font-family: var(--display);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+/* Stops -------------------------------------------------------------------------------- */
+
+.wroute__stop {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 22px;
+}
+
+.wroute__stop[data-next] {
+  box-shadow: 0 24px 54px rgb(15 50 100 / 28%), inset 0 0 0 1.5px rgb(185 227 94 / 55%);
+}
+
+.wroute__stop[data-status="done"] {
+  opacity: 0.85;
+}
+
+.wroute__stop-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.wroute__stop-main {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.wroute__badge {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 16%);
+  font-weight: 900;
+}
+
+.wroute__stop[data-next] .wroute__badge {
+  background: linear-gradient(180deg, var(--lime-bright, #b9e35e), var(--lime-deep, #86bb32));
+  color: var(--lime-ink, #10260f);
+}
+
+.wroute__stop[data-status="done"] .wroute__badge {
+  background: rgb(185 227 94 / 25%);
+  color: var(--lime-text, #cdf07a);
+}
+
+.wroute__open {
+  min-height: 40px;
+}
+
+.wroute__detail {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgb(255 255 255 / 15%);
+}
+
+.wroute__timeline {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wroute__timeline li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+}
+
+@media (max-width: 900px) {
+  .wroute__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wroute__map {
+    position: relative;
+    top: 0;
+  }
+
+  .wroute__map .pickup-map__canvas {
+    height: 300px;
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 520px) {
+  .wroute__active-body {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .wroute__active-info .wroute__row {
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wroute__notice,
+  .wroute__gps .wg__dot::after {
+    animation: none;
+  }
+
+  .wroute__timer-fill {
+    transition: none;
+  }
+}
+
+/* "How it works" steps in the empty state */
+.wroute__how {
+  display: grid;
+  gap: 6px;
+  max-width: 44ch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: rgb(255 255 255 / 85%);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.wroute__how strong {
+  color: var(--lime-text, #cdf07a);
+}
+
+/* Cómo llegar, inside the app ------------------------------------------------- */
+
+.wnav {
+  display: grid;
+  gap: 14px;
+}
+
+.wnav__head {
+  gap: 12px;
+}
+
+.wnav__back {
+  justify-self: start;
+}
+
+.wnav__stat {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.wnav__arrow {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 12%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 25%);
+  color: rgb(255 255 255 / 55%);
+}
+
+.wnav__arrow[data-ready] {
+  background: linear-gradient(180deg, var(--lime-bright, #b9e35e), var(--lime-deep, #86bb32));
+  box-shadow: 0 10px 24px rgb(134 187 50 / 40%);
+  color: var(--lime-ink, #10260f);
+}
+
+.wnav__arrow svg {
+  width: 30px;
+  height: 30px;
+  transition: transform 500ms var(--ease-out);
+}
+
+.wnav__km {
+  display: block;
+  font-family: var(--display);
+  font-size: 1.7rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.wnav__map .pickup-map__canvas {
+  height: 420px;
+  min-height: 420px;
+}
+
+.wnav__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.wnav__actions .wg__primary {
+  flex: 1 1 200px;
+}
+
+@media (max-width: 520px) {
+  .wnav__map .pickup-map__canvas {
+    height: 340px;
+    min-height: 340px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wnav__arrow svg {
+    transition: none;
+  }
+}
+
+/* Turn list under the navigation map */
+
+.wnav__steps {
+  gap: 0;
+  margin: 0;
+  padding: 8px 18px;
+  list-style: none;
+  counter-reset: turn;
+}
+
+.wnav__steps li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 12%);
+  color: rgb(255 255 255 / 80%);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.wnav__steps li:last-child {
+  border-bottom: 0;
+}
+
+.wnav__steps li[aria-current="step"] {
+  color: #fff;
+}
+
+.wnav__steps li[aria-current="step"] span::before {
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--lime-text, #cdf07a);
+  content: "●";
+}
+
+.wnav__steps strong {
+  color: rgb(255 255 255 / 60%);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

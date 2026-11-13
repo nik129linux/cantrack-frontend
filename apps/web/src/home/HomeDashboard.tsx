@@ -9,6 +9,7 @@ import {
 import type { HomeRole } from "./previewData.js";
 import { WalkerHome } from "./WalkerHome.js";
 import { OwnerHome } from "./OwnerHome.js";
+import { WalkerPresenceProvider } from "../walker/presence.js";
 import "../auth/auth.css";
 import "./home.css";
 
@@ -55,7 +56,7 @@ export function HomeShell({ role, screens = {}, onLogout, userId = "", preview =
   const entry = screens[active];
   const screen = typeof entry === "function" ? entry(setActive) : entry;
 
-  return (
+  const shell = (
     <div className="auth-scene home">
       <div className="auth-backdrop" aria-hidden="true">
         <div className="auth-backdrop__clouds auth-backdrop__clouds--left" />
@@ -99,6 +100,15 @@ export function HomeShell({ role, screens = {}, onLogout, userId = "", preview =
         <WalkerHome userId={userId} preview={preview} onNavigate={setActive} />
       )}
     </div>
+  );
+
+  // One online switch and heartbeat for every walker tab, not only Inicio.
+  return role === "walker" ? (
+    <WalkerPresenceProvider walkerId={userId} preview={preview}>
+      {shell}
+    </WalkerPresenceProvider>
+  ) : (
+    shell
   );
 }
 

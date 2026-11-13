@@ -1,0 +1,264 @@
+/* Perfil (walker): the hero, sections and form come from the owner's Perfil
+   (owner-profile.css, owner-glass.css); this file adds what only a walker has:
+   the completeness meter, the card owners see and the rating breakdown. */
+
+.wprofile__name {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.wprofile__stats {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Without a photo the shared Avatar shows initials on a pale disc; on glass they wear lime. */
+.wprofile .oprofile__photo .ui-img-fallback {
+  background: linear-gradient(180deg, var(--lime-bright, #b9e35e), var(--lime-deep, #86bb32));
+  color: var(--lime-ink, #10260f);
+  font-family: var(--display);
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+/* Completeness ---------------------------------------------------------------- */
+
+.wprofile__progress {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+}
+
+.wprofile__progress-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.wprofile__progress-top strong {
+  font-family: var(--display);
+  font-size: 1.15rem;
+}
+
+.wprofile__progress-top span {
+  color: rgb(255 255 255 / 78%);
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.wprofile__meter,
+.wprofile__bar {
+  display: block;
+  overflow: hidden;
+  height: 10px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+}
+
+.wprofile__meter > span,
+.wprofile__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--lime-deep, #86bb32), var(--lime-bright, #b9e35e));
+  transition: width 400ms var(--ease-out, ease-out);
+}
+
+/* The card owners read ---------------------------------------------------------- */
+
+.wprofile__preview {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.wprofile__preview-head .oprofile__sub {
+  margin: 0;
+}
+
+.wprofile__preview-head .explore__hint {
+  margin: 2px 0 0;
+}
+
+.wprofile__card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 22px;
+  background: rgb(10 24 40 / 45%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 16%);
+}
+
+.wprofile__card .ui-img-fallback {
+  background: linear-gradient(180deg, var(--lime-bright, #b9e35e), var(--lime-deep, #86bb32));
+  color: var(--lime-ink, #10260f);
+  font-family: var(--display);
+  font-weight: 700;
+}
+
+.wprofile__card-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.wprofile__card-name {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  line-height: 1.15;
+}
+
+.wprofile__card-rating {
+  color: #ffd866;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.wprofile__card-bio {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: rgb(255 255 255 / 86%);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.wprofile__card-bio--empty {
+  color: rgb(255 255 255 / 55%);
+  font-style: italic;
+}
+
+.wprofile__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wprofile__chips li {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.wprofile__card-price {
+  color: var(--lime-text, #cdf07a);
+  font-family: var(--display);
+  font-size: 1.3rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Ratings -------------------------------------------------------------------------- */
+
+.wprofile__bars {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.wprofile__bars li {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.wprofile__bar-label {
+  color: #ffd866;
+  white-space: nowrap;
+}
+
+.wprofile__bar > span {
+  background: linear-gradient(90deg, #f2b93b, #ffd866);
+}
+
+.wprofile__bar-count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.wprofile__reviews {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wprofile__reviews li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 12%);
+}
+
+.wprofile__reviews li:last-child {
+  border-bottom: 0;
+}
+
+.wprofile__stars {
+  color: #ffd866;
+  font-size: 15px;
+  letter-spacing: 2px;
+}
+
+.wprofile__stars-off {
+  color: rgb(255 255 255 / 25%);
+}
+
+.wprofile__review-who {
+  margin-right: auto;
+  font-weight: 800;
+}
+
+.wprofile__review-date {
+  color: rgb(255 255 255 / 70%);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Phone ------------------------------------------------------------------------------ */
+
+@media (max-width: 520px) {
+  .wprofile__stats {
+    grid-template-columns: repeat(2, 1fr);
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .wprofile__card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .wprofile__card-price {
+    grid-column: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wprofile__meter > span,
+  .wprofile__bar > span {
+    transition: none;
+  }
+}

@@ -1,0 +1,390 @@
+/* Perfil (owner): hero and collapsible sections. The glass, the form
+   controls and the messages come from owner-glass.css (`.oglass`). */
+
+/* Hero ---------------------------------------------------------------------- */
+
+.oprofile__hero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px 18px;
+  align-items: center;
+  padding: 20px;
+}
+
+.oprofile__photo {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.oprofile__photo .ui-avatar {
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 35%), 0 10px 24px rgb(5 25 50 / 35%);
+}
+
+.oprofile__photo-btn {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 200ms var(--ease-out);
+}
+
+.oprofile__photo-btn:hover {
+  background: rgb(255 255 255 / 24%);
+}
+
+.oprofile__who {
+  min-width: 0;
+}
+
+.oprofile__since {
+  margin: 4px 0 10px;
+  color: var(--lime-text);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.oprofile__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.oprofile__badges li {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 10%);
+  color: rgb(255 255 255 / 70%);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.oprofile__badges li[data-on="true"] {
+  background: rgb(255 255 255 / 16%);
+  color: #fff;
+}
+
+.oprofile__badges li[data-on="true"]::before {
+  color: var(--lime-text);
+  content: "✓ ";
+}
+
+.oprofile__stats {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+
+.oprofile__stats div {
+  padding: 10px;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 18px;
+  background: rgb(255 255 255 / 10%);
+  text-align: center;
+}
+
+.oprofile__stats dt {
+  color: rgb(255 255 255 / 78%);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.oprofile__stats dd {
+  margin: 2px 0 0;
+  font-family: var(--display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.oprofile__dogs {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.oprofile__dog {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 14px 4px 4px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 200ms var(--ease-out), transform 160ms var(--ease-out);
+}
+
+.oprofile__dog:hover {
+  background: rgb(255 255 255 / 22%);
+}
+
+.oprofile__dog:active {
+  transform: scale(0.96);
+}
+
+.oprofile__dog--add {
+  padding-left: 14px;
+  border: 1px dashed rgb(255 255 255 / 40%);
+  background: transparent;
+  color: var(--lime-text);
+}
+
+.oprofile__dog-initial {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--lime-bright), var(--lime-deep));
+  color: var(--lime-ink);
+  font-family: var(--display);
+}
+
+/* Collapsible sections ------------------------------------------------------ */
+
+.oprofile__summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 12px 18px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.oprofile__summary::-webkit-details-marker {
+  display: none;
+}
+
+.oprofile__summary-title {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.oprofile__summary-value {
+  flex: 1;
+  overflow: hidden;
+  color: rgb(255 255 255 / 76%);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oprofile__chevron {
+  width: 10px;
+  height: 10px;
+  border-right: 2.5px solid var(--lime-text);
+  border-bottom: 2.5px solid var(--lime-text);
+  transform: rotate(45deg) translateY(-3px);
+  transition: transform 200ms var(--ease-out);
+}
+
+.oprofile__section[open] .oprofile__chevron {
+  transform: rotate(-135deg) translateY(-3px);
+}
+
+.oprofile__body {
+  padding: 0 18px 18px;
+}
+
+.oprofile__gap {
+  margin-top: 14px;
+}
+
+.oprofile__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0 12px;
+}
+
+.oprofile__sub {
+  margin: 8px 0 10px;
+  color: var(--lime-text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.oprofile__textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+/* Notification switches ----------------------------------------------------- */
+
+.oprofile__toggles {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.oprofile__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 10%);
+  cursor: pointer;
+}
+
+.oprofile__toggle span {
+  display: grid;
+  gap: 2px;
+}
+
+.oprofile__toggle strong {
+  font-size: 15px;
+}
+
+.oprofile__toggle small {
+  color: rgb(255 255 255 / 72%);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.oprofile__toggle input {
+  flex: none;
+  appearance: none;
+  position: relative;
+  width: 48px;
+  height: 28px;
+  margin: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 22%);
+  cursor: pointer;
+  transition: background 200ms var(--ease-out);
+}
+
+.oprofile__toggle input::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+  content: "";
+  transition: transform 200ms var(--ease-out);
+}
+
+.oprofile__toggle input:checked {
+  background: linear-gradient(180deg, var(--lime-bright), var(--lime-deep));
+}
+
+.oprofile__toggle input:checked::after {
+  transform: translateX(20px);
+}
+
+/* Focus rings --------------------------------------------------------------- */
+
+.oprofile__summary:focus-visible,
+.oprofile__dog:focus-visible,
+.oprofile__toggle input:focus-visible {
+  outline: 3px solid var(--lime-text);
+  outline-offset: 2px;
+}
+
+.oprofile__summary:focus-visible {
+  border-radius: 28px;
+}
+
+.oprofile__photo-btn:has(+ input:focus-visible) {
+  outline: 3px solid var(--lime-text);
+  outline-offset: 2px;
+}
+
+/* Privacy and account: centred actions -------------------------------------- */
+
+.oprofile__account {
+  display: grid;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+/* AccountSettings renders its own cards; inside the glass section they go
+   flat, divided by a light line, and every action is centred at one width. */
+.oprofile__account .explore__form {
+  display: grid;
+  justify-items: center;
+  padding: 16px 0 0;
+  border-top: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: #fff;
+  text-align: center;
+}
+
+.oprofile__account .explore__field {
+  width: 100%;
+  text-align: left;
+}
+
+.oprofile__account .explore__section {
+  font-family: var(--display);
+}
+
+.oprofile__account .explore__cta {
+  width: min(100%, 340px);
+}
+
+.oprofile__account .explore__offer-actions {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.oprofile__account .explore__offer-actions > button {
+  width: min(100%, 340px);
+}
+
+/* Phones -------------------------------------------------------------------- */
+
+@media (max-width: 520px) {
+  .oprofile__hero {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .oprofile__badges,
+  .oprofile__dogs {
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oprofile__chevron,
+  .oprofile__toggle input,
+  .oprofile__toggle input::after,
+  .oprofile__dog,
+  .oprofile__photo-btn {
+    transition: none;
+  }
+}

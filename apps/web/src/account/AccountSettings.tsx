@@ -143,8 +143,8 @@ export function AccountSettings({ role, userId, onSignOut }: AccountSettingsProp
         </div>
       </form>
 
-      <section className="explore__form" aria-label="Tus datos">
-        <h2 className="explore__section">Tus datos</h2>
+      <section className="explore__form" aria-label="Tu información">
+        <h2 className="explore__section">Tu información</h2>
         <p className="explore__hint">Ley 1581 de 2012: puedes descargar o borrar tu información.</p>
         <div className="explore__offer-actions">
           <button type="button" className="explore__small explore__small--lime" onClick={() => void exportData()}>

@@ -4,9 +4,16 @@
 .city {
   --scale: 1;
   position: relative;
+  /* Each entity's z-index is its row on the island (up to ~900) so sprites
+     overlap back-to-front. Isolating keeps that range inside the scene;
+     without it the sprites outrank the fixed nav and the glass cards. */
+  isolation: isolate;
+  z-index: 0;
   width: 100%;
   aspect-ratio: 1025 / 906;
   user-select: none;
+  /* Nothing in the scene is interactive, so taps reach whatever is above it. */
+  pointer-events: none;
 }
 
 .city__island {

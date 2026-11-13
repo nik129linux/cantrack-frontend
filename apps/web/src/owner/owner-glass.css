@@ -1,0 +1,176 @@
+/* Owner screens on liquid glass (Perfil, Mis paseos): the same dark glass as
+   Inicio (home.css `.glass`), white text and lime accents. A screen opts in
+   with the `oglass` class on its root; the shared `.explore__*` controls are
+   restyled only inside it, so the light screens keep their look. */
+
+/* The shared screen frame is a near-white card; glass screens drop it so the
+   cards sit straight on the scene, like Inicio. */
+.home__screen:has(> .oglass) {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  color: #fff;
+}
+
+.oglass {
+  gap: 14px;
+  color: #fff;
+}
+
+.oglass .explore__title {
+  color: #fff;
+  font-family: var(--display);
+}
+
+.oglass .explore__subtitle {
+  color: rgb(255 255 255 / 80%);
+}
+
+.oglass .explore__section {
+  font-family: var(--display);
+}
+
+/* Forms ---------------------------------------------------------------------- */
+
+.oglass .explore__label {
+  color: rgb(255 255 255 / 88%);
+}
+
+.oglass .explore__hint {
+  color: rgb(255 255 255 / 72%);
+}
+
+.oglass .explore__input {
+  border: 1px solid rgb(255 255 255 / 30%);
+  background: rgb(255 255 255 / 12%);
+  color: #fff;
+  color-scheme: dark;
+}
+
+.oglass .explore__input::placeholder {
+  color: rgb(255 255 255 / 55%);
+}
+
+.oglass .explore__input[readonly] {
+  color: rgb(255 255 255 / 72%);
+}
+
+.oglass .explore__input:focus {
+  border-color: var(--lime-text);
+  box-shadow: 0 0 0 4px rgb(205 240 122 / 25%);
+}
+
+.oglass .explore__segments {
+  background: rgb(255 255 255 / 12%);
+}
+
+.oglass .explore__segment {
+  background: transparent;
+  color: #fff;
+}
+
+.oglass .explore__segment[aria-checked="true"],
+.oglass .explore__segment[aria-pressed="true"] {
+  background: linear-gradient(180deg, var(--lime-bright), var(--lime-deep));
+  color: var(--lime-ink);
+}
+
+/* Buttons -------------------------------------------------------------------- */
+
+.oglass .explore__small {
+  background: rgb(255 255 255 / 14%);
+  color: #fff;
+}
+
+.oglass .explore__small:hover:not(:disabled) {
+  background: rgb(255 255 255 / 22%);
+}
+
+.oglass .explore__small--lime,
+.oglass .explore__small--lime:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--lime-bright), var(--lime-deep));
+  color: var(--lime-ink);
+}
+
+.oglass .explore__small--no,
+.oglass .explore__small--no:hover:not(:disabled) {
+  background: rgb(255 110 90 / 22%);
+  color: #ffd9d1;
+}
+
+/* Messages ------------------------------------------------------------------- */
+
+.oglass .explore__notice {
+  margin-bottom: 8px;
+  background: rgb(166 212 74 / 20%);
+  color: #f2ffd8;
+}
+
+.oglass .explore__error {
+  background: rgb(255 110 90 / 22%);
+  color: #ffe1db;
+}
+
+.oglass .explore__status,
+.oglass .explore__empty {
+  background: rgb(255 255 255 / 10%);
+  color: rgb(255 255 255 / 86%);
+}
+
+/* List rows ------------------------------------------------------------------ */
+
+.oglass .explore__offer {
+  background: rgb(255 255 255 / 10%);
+}
+
+.oglass .explore__offer-main {
+  color: rgb(255 255 255 / 76%);
+}
+
+.oglass .explore__offer-main strong {
+  color: #fff;
+}
+
+/* Maps inside glass ---------------------------------------------------------- */
+
+.oglass .pickup-map__hint {
+  color: rgb(255 255 255 / 76%);
+}
+
+.oglass .pickup-map__button {
+  background: rgb(255 255 255 / 14%);
+  color: #fff;
+}
+
+.oglass .pickup-map__button:hover {
+  background: rgb(255 255 255 / 22%);
+}
+
+.oglass .pickup-map__notice {
+  background: rgb(166 212 74 / 20%);
+  color: #f2ffd8;
+}
+
+/* Focus rings ---------------------------------------------------------------- */
+
+.oglass .explore__small:focus-visible,
+.oglass .explore__segment:focus-visible,
+.oglass .explore__cta:focus-visible {
+  outline: 3px solid var(--lime-text);
+  outline-offset: 2px;
+}
+
+/* Load error with a retry ---------------------------------------------------- */
+
+.oglass__retry {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 18px;
+}
+
+.oglass__retry .explore__error {
+  width: 100%;
+  margin: 0;
+  text-align: center;
+}

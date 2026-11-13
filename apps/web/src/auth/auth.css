@@ -870,9 +870,12 @@ body:has(.auth-scene) {
 }
 
 .auth-social__row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.auth-social__row > .auth-social__button {
+  width: 100%;
 }
 
 .auth-social__button {

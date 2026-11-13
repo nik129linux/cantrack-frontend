@@ -1,0 +1,671 @@
+/* Explorar (owner) on liquid glass: step cards, dog and time chips, the
+   waiting panel with its countdown, and the offer cards. The shared form
+   controls come from owner-glass.css (`.oglass`). */
+
+.oexplore__head {
+  display: grid;
+  gap: 8px;
+  padding: 2px 6px 0;
+}
+
+.oexplore__head .explore__title,
+.oexplore__head .explore__subtitle {
+  text-shadow: 0 1px 2px rgb(5 25 50 / 55%), 0 2px 14px rgb(5 25 50 / 45%);
+}
+
+.oexplore__nearby {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgb(10 32 58 / 50%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 22%);
+  font-size: 13px;
+  font-weight: 800;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+/* Live dot (nearby walkers, open request) */
+.oexplore__dot {
+  position: relative;
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #7dff7a;
+}
+
+.oexplore__dot::after {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: inherit;
+  content: "";
+  animation: oexplore-pulse 1.6s var(--ease-out) infinite;
+}
+
+.oexplore__dot[data-off] {
+  background: rgb(255 255 255 / 45%);
+}
+
+.oexplore__dot[data-off]::after {
+  animation: none;
+}
+
+@keyframes oexplore-pulse {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+/* Form steps ----------------------------------------------------------------- */
+
+.oexplore__form {
+  display: grid;
+  gap: 12px;
+}
+
+.oexplore__step {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+}
+
+.oexplore__step--missing {
+  box-shadow: inset 0 0 0 2px rgb(255 214 102 / 70%);
+}
+
+.oexplore__step-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.oexplore__muted {
+  color: rgb(255 255 255 / 72%);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Dog chips */
+.oexplore__dogs,
+.oexplore__times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.oexplore__dog,
+.oexplore__time {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 12%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 22%);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 200ms var(--ease-out), transform 160ms var(--ease-out);
+}
+
+.oexplore__dog {
+  padding-left: 5px;
+}
+
+.oexplore__dog:active,
+.oexplore__time:active {
+  transform: scale(0.96);
+}
+
+.oexplore__dog[aria-checked="true"],
+.oexplore__time[aria-pressed="true"] {
+  background: linear-gradient(180deg, var(--lime-bright), var(--lime-deep));
+  box-shadow: none;
+  color: var(--lime-ink);
+}
+
+.oexplore__dog-initial,
+.oexplore__avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--lime-bright), var(--lime-deep));
+  color: var(--lime-ink);
+  font-family: var(--display);
+  font-weight: 600;
+}
+
+.oexplore__dog[aria-checked="true"] .oexplore__dog-initial {
+  background: rgb(255 255 255 / 55%);
+}
+
+.oexplore__picked {
+  margin: 0;
+  color: var(--lime-text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.oexplore__durations {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+/* Map: a shorter canvas inside its card */
+.oexplore__map .pickup-map {
+  margin: 0;
+}
+
+.oexplore__map .pickup-map__canvas {
+  height: 260px;
+  min-height: 0;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 30%);
+}
+
+/* Fare */
+.oexplore__fare-card .explore__fare {
+  margin: 0;
+}
+
+.oglass .explore__fare-value {
+  font-family: var(--display);
+  font-size: 2.6rem;
+}
+
+.oglass .explore__round {
+  background: rgb(255 255 255 / 16%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 28%);
+  color: #fff;
+}
+
+.oglass .explore__round:hover:not(:disabled) {
+  background: rgb(255 255 255 / 24%);
+}
+
+.oglass .explore__round:focus-visible {
+  outline: 3px solid var(--lime-text);
+  outline-offset: 2px;
+}
+
+.oexplore__suggest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  text-align: center;
+}
+
+.oexplore__suggest .explore__hint {
+  margin: 0;
+}
+
+/* Assistant (collapsed) */
+.oexplore__assistant {
+  padding: 0;
+}
+
+.oexplore__assistant summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 18px;
+  font-family: var(--display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.oexplore__assistant summary::-webkit-details-marker {
+  display: none;
+}
+
+.oexplore__assistant summary:focus-visible {
+  border-radius: inherit;
+  outline: 3px solid var(--lime-text);
+  outline-offset: -3px;
+}
+
+.oexplore__chev {
+  width: 10px;
+  height: 10px;
+  border-right: 2.5px solid var(--lime-text);
+  border-bottom: 2.5px solid var(--lime-text);
+  transform: rotate(45deg) translateY(-3px);
+  transition: transform 200ms var(--ease-out);
+}
+
+.oexplore__assistant[open] .oexplore__chev {
+  transform: rotate(-135deg) translateY(-3px);
+}
+
+.oexplore__assistant-body {
+  display: grid;
+  gap: 8px;
+  padding: 0 18px 18px;
+}
+
+.oexplore__assistant-body .explore__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Submit */
+.oexplore__submit {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+}
+
+.oexplore__summary {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.oexplore__summary strong {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.oexplore__summary-price {
+  color: var(--lime-text);
+  font-weight: 800;
+}
+
+.oexplore__fineprint {
+  margin: 0;
+  color: rgb(255 255 255 / 70%);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* No dog yet */
+.oexplore__nodog {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 22px 18px;
+  text-align: center;
+}
+
+.oexplore__nodog .mascot-sprite {
+  filter: drop-shadow(0 6px 8px rgb(5 25 50 / 35%));
+}
+
+.oexplore__nodog p {
+  max-width: 34ch;
+  margin: 0;
+  font-weight: 800;
+}
+
+/* Waiting for offers ---------------------------------------------------------- */
+
+.oexplore__panel {
+  display: grid;
+  gap: 10px;
+}
+
+.oexplore__waiting {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 0;
+  overflow: hidden;
+}
+
+.oexplore__waiting-text {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+  padding-bottom: 18px;
+}
+
+.oexplore__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--lime-text);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.oexplore__waiting-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.7rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.oexplore__waiting-sub {
+  margin: 0;
+  color: rgb(255 255 255 / 86%);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.oexplore__countdown {
+  margin: 6px 0 0;
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.oexplore__bar {
+  display: block;
+  height: 8px;
+  max-width: 320px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 16%);
+}
+
+.oexplore__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--lime-deep), var(--lime-bright));
+  transition: width 1s linear;
+}
+
+.oexplore__art {
+  flex: none;
+  width: auto;
+  height: 124px;
+  filter: drop-shadow(0 6px 8px rgb(5 25 50 / 35%));
+  user-select: none;
+}
+
+.oexplore__empty-line {
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.oexplore__expired {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.oexplore__expired p {
+  margin: 0;
+  font-weight: 800;
+}
+
+/* Offer cards */
+.oexplore__offers,
+.oexplore__requests {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.oexplore__offer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.oexplore__offer[data-best] {
+  box-shadow: inset 0 0 0 2px rgb(205 240 122 / 70%);
+}
+
+.oexplore__offer .oexplore__avatar {
+  width: 46px;
+  height: 46px;
+  font-size: 1.25rem;
+}
+
+.oexplore__offer-main,
+.oexplore__request-main {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+
+.oexplore__best {
+  color: var(--lime-text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.oexplore__offer-name {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.oexplore__offer-rating {
+  color: #ffd866;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* The walker's own words from Perfil: two lines, the rest is in the chips. */
+.oexplore__offer-bio {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: rgb(255 255 255 / 86%);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.oexplore__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.oexplore__chip {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.oexplore__chip--fav {
+  background: rgb(255 120 150 / 25%);
+  color: #ffd6e0;
+}
+
+.oexplore__chip--lime {
+  background: rgb(205 240 122 / 22%);
+  color: var(--lime-text);
+}
+
+.oexplore__offer-side {
+  display: grid;
+  flex: none;
+  justify-items: end;
+  gap: 6px;
+}
+
+.oexplore__price {
+  color: var(--lime-text);
+  font-family: var(--display);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.oexplore__panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Messages sitting straight on the scene get a dark base so they read over
+   bright clouds as well as grass. */
+.oexplore > .explore__notice,
+.oexplore > .explore__error,
+.oexplore__panel > .explore__error,
+.oexplore__empty-line {
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.oexplore > .explore__notice {
+  background: rgb(36 66 18 / 72%);
+  color: #f2ffd8;
+}
+
+.oexplore > .explore__error,
+.oexplore__panel > .explore__error {
+  background: rgb(90 25 15 / 72%);
+  color: #ffe1db;
+}
+
+.oglass .oexplore__empty-line {
+  background: rgb(10 32 58 / 55%);
+  color: #fff;
+}
+
+.oexplore__confirm {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 380px);
+  padding: 12px;
+  border-radius: 18px;
+  background: rgb(70 20 10 / 45%);
+}
+
+.oexplore__confirm p {
+  margin: 0;
+  font-weight: 800;
+}
+
+.oexplore__confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* My open requests */
+.oexplore__request {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 10%);
+}
+
+.oexplore__request-main strong {
+  font-size: 15px;
+}
+
+.oexplore__request-main > span:not(.oexplore__chips) {
+  color: rgb(255 255 255 / 78%);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.oexplore__request-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.oexplore__more {
+  justify-self: center;
+}
+
+/* Focus ---------------------------------------------------------------------- */
+
+.oexplore__dog:focus-visible,
+.oexplore__time:focus-visible {
+  outline: 3px solid var(--lime-text);
+  outline-offset: 2px;
+}
+
+/* Phones --------------------------------------------------------------------- */
+
+@media (max-width: 520px) {
+  .oexplore__durations {
+    grid-template-columns: repeat(3, 1fr);
+    border-radius: 24px;
+  }
+
+  .oexplore__art {
+    height: 96px;
+  }
+
+  .oexplore__waiting-title {
+    font-size: 1.45rem;
+  }
+
+  .oexplore__offer {
+    flex-wrap: wrap;
+  }
+
+  .oexplore__offer-side {
+    display: flex;
+    flex: 1 1 100%;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .oexplore__map .pickup-map__canvas {
+    height: 220px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oexplore__dot::after {
+    animation: none;
+  }
+
+  .oexplore__dog,
+  .oexplore__time,
+  .oexplore__bar span,
+  .oexplore__chev {
+    transition: none;
+  }
+}

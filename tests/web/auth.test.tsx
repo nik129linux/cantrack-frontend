@@ -55,13 +55,18 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
     render(<SignupScreen />);
 
     await user.type(screen.getByLabelText(/correo electrónico/i), "walker@example.com");
-    await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/^contraseña$/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/confirmar contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/nombre completo/i), "Ana Pérez");
+    await user.type(screen.getByLabelText(/celular/i), "3001234567");
     await user.click(screen.getByLabelText(/paseador/i));
     await user.click(screen.getByLabelText(/tratamiento de datos/i));
     await user.click(screen.getByRole("button", { name: /crear cuenta/i }));
 
     await waitFor(() => {
       expect(mockSignUp).toHaveBeenCalledWith({
+        fullName: "Ana Pérez",
+        phone: "3001234567",
         email: "walker@example.com",
         password: "correct horse battery staple",
         role: "walker",
@@ -79,7 +84,10 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
     render(<SignupScreen />);
 
     await user.type(screen.getByLabelText(/correo electrónico/i), "owner@example.com");
-    await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/^contraseña$/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/confirmar contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/nombre completo/i), "Ana Pérez");
+    await user.type(screen.getByLabelText(/celular/i), "3001234567");
     await user.click(screen.getByLabelText(/dueño/i));
     await user.click(screen.getByLabelText(/tratamiento de datos/i));
     await user.click(screen.getByRole("button", { name: /crear cuenta/i }));
@@ -92,7 +100,10 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
     const user = userEvent.setup();
     render(<SignupScreen />);
 
-    await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/^contraseña$/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/confirmar contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/nombre completo/i), "Ana Pérez");
+    await user.type(screen.getByLabelText(/celular/i), "3001234567");
     await user.click(screen.getByLabelText(/paseador/i));
     await user.click(screen.getByLabelText(/tratamiento de datos/i));
     await user.click(screen.getByRole("button", { name: /crear cuenta/i }));
@@ -110,7 +121,10 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
     render(<SignupScreen />);
 
     await user.type(screen.getByLabelText(/correo electrónico/i), "dup@example.com");
-    await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/^contraseña$/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/confirmar contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/nombre completo/i), "Ana Pérez");
+    await user.type(screen.getByLabelText(/celular/i), "3001234567");
     await user.click(screen.getByLabelText(/paseador/i));
     await user.click(screen.getByLabelText(/tratamiento de datos/i));
     await user.click(screen.getByRole("button", { name: /crear cuenta/i }));
@@ -188,7 +202,10 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
     render(<SignupScreen />);
 
     await user.type(screen.getByLabelText(/correo electrónico/i), "walker@example.com");
-    await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/^contraseña$/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/confirmar contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/nombre completo/i), "Ana Pérez");
+    await user.type(screen.getByLabelText(/celular/i), "3001234567");
     await user.click(screen.getByRole("button", { name: /crear cuenta/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -206,13 +223,18 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
 
     expect(screen.getByText(/una frase larga es más segura/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText(/correo electrónico/i), "ana@example.com");
-    await user.type(screen.getByLabelText(/contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/^contraseña$/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/confirmar contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/nombre completo/i), "Ana Pérez");
+    await user.type(screen.getByLabelText(/celular/i), "3001234567");
     await user.click(screen.getByLabelText(/dueño/i));
     await user.click(screen.getByLabelText(/tratamiento de datos/i));
     await user.click(screen.getByRole("button", { name: /crear cuenta/i }));
 
     await waitFor(() => {
       expect(mockSignUp).toHaveBeenCalledWith({
+        fullName: "Ana Pérez",
+        phone: "3001234567",
         email: "ana@example.com",
         password: "correct horse battery staple",
         role: "owner",
@@ -332,11 +354,16 @@ describe("Auth screens (FR-01, FR-02, FR-03)", () => {
 
     await user.type(screen.getByLabelText("Correo electrónico"), "walker@example.com");
     await user.type(screen.getByLabelText("Contraseña"), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/confirmar contraseña/i), "correct horse battery staple");
+    await user.type(screen.getByLabelText(/nombre completo/i), "Ana Pérez");
+    await user.type(screen.getByLabelText(/celular/i), "3001234567");
     await user.click(screen.getByLabelText(/tratamiento de datos/i));
     await user.click(screen.getByRole("button", { name: "Crear cuenta" }));
 
     await waitFor(() => {
       expect(mockSignUp).toHaveBeenCalledWith({
+        fullName: "Ana Pérez",
+        phone: "3001234567",
         email: "walker@example.com",
         password: "correct horse battery staple",
         role: "walker",

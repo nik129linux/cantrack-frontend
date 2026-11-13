@@ -64,7 +64,10 @@ export const authCopy = {
     sent: "Revisa tu correo: te enviamos un enlace para restablecer tu contraseña.",
   },
   fields: {
+    fullName: "Nombre completo",
     email: "Correo electrónico",
+    phone: "Número de celular",
+    confirmPassword: "Confirmar contraseña",
     password: "Contraseña",
     showPassword: "Mostrar clave",
     hidePassword: "Ocultar clave",
@@ -73,6 +76,10 @@ export const authCopy = {
     owner: "Dueño",
   },
   errors: {
+    fullNameRequired: "Escribe tu nombre completo.",
+    phoneRequired: "Escribe un número de celular válido.",
+    confirmRequired: "Confirma tu contraseña.",
+    passwordMismatch: "Las contraseñas no coinciden.",
     emailRequired: "Escribe tu correo electrónico.",
     consentRequired: "Marca la casilla de datos personales para continuar.",
     oauth: "No pudimos conectar con ese servicio. Inténtalo de nuevo.",

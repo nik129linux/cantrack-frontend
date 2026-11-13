@@ -1,3 +1,4 @@
+import { beginWork } from "../mascot/mascotBus.js";
 import { ApiError } from "./apiError.js";
 import { supabase } from "./supabase.js";
 
@@ -8,7 +9,54 @@ export type Dog = {
   name: string;
   breed?: string | null;
   notes?: string | null;
+  profile: DogProfile | null;
+  hasPhotos: boolean;
 };
+
+export type DogTraits = {
+  breed: string | null;
+  size: "small" | "medium" | "large" | null;
+};
+
+type DogRow = {
+  id: string;
+  name: string;
+  breed?: string | null;
+  notes?: string | null;
+  profile?: {
+    size?: string | null;
+    temperament?: string | null;
+    energy?: string | null;
+    leash_trained?: boolean | null;
+    allergies?: string | null;
+    medical_notes?: string | null;
+    vet_contact?: string | null;
+    emergency_contact?: string | null;
+  } | null;
+  embedding?: number[] | string | null;
+};
+
+function toDog(row: DogRow): Dog {
+  const profile = row.profile;
+  return {
+    id: row.id,
+    name: row.name,
+    breed: row.breed,
+    notes: row.notes,
+    profile: profile == null ? null : {
+      size: profile.size ?? "",
+      temperament: profile.temperament ?? "",
+      energy: profile.energy ?? "",
+      leashTrained: Boolean(profile.leash_trained),
+      allergies: profile.allergies ?? null,
+      medicalNotes: profile.medical_notes ?? null,
+      vetContact: profile.vet_contact ?? null,
+      emergencyContact: profile.emergency_contact ?? null,
+    },
+    hasPhotos: row.embedding != null &&
+      (!Array.isArray(row.embedding) || row.embedding.length > 0),
+  };
+}
 
 export type CreateDogInput = {
   name: string;
@@ -68,7 +116,23 @@ export type RequestOptions = {
   headers?: Record<string, string>;
   /** Skip the Authorization header (login and signup have no session yet). */
   anonymous?: boolean;
+  /**
+   * Writes show the global mascot (walking, then a jump or a sad face).
+   * `false` keeps a write silent: background syncs, and flows that already
+   * show their own dog (login, logout). A string replaces the "Guardando…" label.
+   */
+  mascot?: false | string;
 };
+
+function mascotLabel(method: string, option: RequestOptions["mascot"]): string | null {
+  if (option === false || method === "GET" || method === "HEAD") {
+    return null;
+  }
+  if (typeof option === "string") {
+    return option;
+  }
+  return method === "DELETE" ? "Eliminando…" : "Guardando…";
+}
 
 /**
  * One validation problem out of a FastAPI `{"detail": [...]}` list, e.g.
@@ -140,6 +204,22 @@ function readErrorId(text: string): string | null {
 }
 
 export async function rawRequest(path: string, options: RequestOptions = {}): Promise<Response> {
+  const label = mascotLabel((options.method ?? "GET").toUpperCase(), options.mascot);
+  if (label === null) {
+    return sendRequest(path, options);
+  }
+  const end = beginWork(label);
+  try {
+    const response = await sendRequest(path, options);
+    end("success");
+    return response;
+  } catch (error: unknown) {
+    end("error");
+    throw error;
+  }
+}
+
+async function sendRequest(path: string, options: RequestOptions): Promise<Response> {
   const { data } = await supabase.auth.getSession();
   const headers = new Headers(options.headers);
 
@@ -184,28 +264,57 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   return response.json() as Promise<T>;
 }
 
-export function fetchDogs(): Promise<Dog[]> {
-  return request<Dog[]>("/dogs");
+export async function fetchDogs(): Promise<Dog[]> {
+  return (await request<DogRow[]>("/dogs")).map(toDog);
 }
 
-export function createDog(input: CreateDogInput): Promise<Dog> {
-  return request<Dog>("/dogs", {
+export async function createDog(input: CreateDogInput): Promise<Dog> {
+  const row = await request<DogRow>("/dogs", {
     method: "POST",
     body: JSON.stringify(input),
+  });
+  return { ...toDog(row), hasPhotos: false };
+}
+
+export async function updateDog(
+  dogId: string,
+  patch: { name?: string; breed?: string | null; notes?: string | null },
+): Promise<Dog> {
+  const row = await request<DogRow>(`/dogs/${encodeURIComponent(dogId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+  return toDog(row);
+}
+
+export async function deleteDog(dogId: string): Promise<void> {
+  await request<{ message: string }>(`/dogs/${encodeURIComponent(dogId)}`, {
+    method: "DELETE",
+  });
+}
+
+export function suggestDogTraits(dogId: string, photo: Blob): Promise<DogTraits> {
+  const body = new FormData();
+  body.append("image", photo, "dog.jpg");
+  return request<DogTraits>(`/dogs/${encodeURIComponent(dogId)}/suggest`, {
+    method: "POST",
+    body,
+    mascot: false,
   });
 }
 
 /** Upload the reference photos; the API embeds them on the server and stores the mean vector. */
-export function enrollPhotos(dogId: string, photos: File[]): Promise<Dog> {
+export async function enrollPhotos(dogId: string, photos: File[]): Promise<Dog> {
   const body = new FormData();
   for (const photo of photos) {
     body.append("image", photo);
   }
 
-  return request<Dog>(`/dogs/${encodeURIComponent(dogId)}/photos`, {
+  const row = await request<DogRow>(`/dogs/${encodeURIComponent(dogId)}/photos`, {
     method: "POST",
     body,
   });
+  return { ...toDog(row), hasPhotos: true };
 }
 
 export function fetchRoutes(): Promise<Route[]> {
@@ -509,6 +618,7 @@ export function suggestPlan(input: SuggestPlanInput): Promise<SuggestedPlan> {
   return request<SuggestedPlan>("/plans/suggest", {
     method: "POST",
     body: JSON.stringify(input),
+    mascot: false, // a read that happens to be a POST
   });
 }
 

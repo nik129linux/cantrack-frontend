@@ -16,6 +16,8 @@ import {
   ClockIcon,
   LockIcon,
   MailIcon,
+  PhoneIcon,
+  UserIcon,
   PinIcon,
   RouteIcon,
   ShieldIcon,
@@ -196,8 +198,11 @@ function ResendLink({ email }: { email: string }) {
 }
 
 export function SignupScreen() {
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [pickedRole, setPickedRole] = useState<UserRole>("walker");
   const [hasConsent, setHasConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -218,8 +223,8 @@ export function SignupScreen() {
     setError(null);
     setIsDone(false);
 
-    if (!hasConsent) {
-      fail(authCopy.errors.consentRequired);
+    if (fullName.trim().length === 0) {
+      fail(authCopy.errors.fullNameRequired);
       return;
     }
 
@@ -228,15 +233,41 @@ export function SignupScreen() {
       return;
     }
 
+    if (!/^\+?[0-9][0-9 ]{6,19}$/.test(phone.trim())) {
+      fail(authCopy.errors.phoneRequired);
+      return;
+    }
+
     if (password.length === 0) {
       fail(authCopy.errors.passwordRequired);
+      return;
+    }
+
+    if (confirmPassword.length === 0) {
+      fail(authCopy.errors.confirmRequired);
+      return;
+    }
+
+    if (confirmPassword !== password) {
+      fail(authCopy.errors.passwordMismatch);
+      return;
+    }
+
+    if (!hasConsent) {
+      fail(authCopy.errors.consentRequired);
       return;
     }
 
     setIsSubmitting(true);
     setMood("submitting");
     try {
-      await signupAccount({ email: email.trim(), password, role });
+      await signupAccount({
+        fullName: fullName.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        password,
+        role,
+      });
       try {
         // Consent is recorded once the first session exists (see App).
         window.localStorage.setItem(PENDING_CONSENT_KEY, "1");
@@ -266,6 +297,15 @@ export function SignupScreen() {
       <ScreenHeading title={authCopy.signup.title} subtitle={authCopy.signup.subtitle} />
       <form onSubmit={handleSubmit} noValidate>
         <AuthField
+          id="signup-name"
+          name="name"
+          label={authCopy.fields.fullName}
+          icon={<UserIcon />}
+          autoComplete="name"
+          value={fullName}
+          onChange={setFullName}
+        />
+        <AuthField
           id="signup-email"
           name="email"
           label={authCopy.fields.email}
@@ -278,6 +318,16 @@ export function SignupScreen() {
           onBlur={() => setMood("idle")}
         />
         <AuthField
+          id="signup-phone"
+          name="phone"
+          label={authCopy.fields.phone}
+          icon={<PhoneIcon />}
+          type="tel"
+          autoComplete="tel"
+          value={phone}
+          onChange={setPhone}
+        />
+        <AuthField
           id="signup-password"
           name="password"
           label={authCopy.fields.password}
@@ -286,6 +336,18 @@ export function SignupScreen() {
           autoComplete="new-password"
           value={password}
           onChange={setPassword}
+          onFocus={() => setMood("password")}
+          onBlur={() => setMood("idle")}
+        />
+        <AuthField
+          id="signup-confirm-password"
+          name="confirmPassword"
+          label={authCopy.fields.confirmPassword}
+          icon={<LockIcon />}
+          type="password"
+          autoComplete="new-password"
+          value={confirmPassword}
+          onChange={setConfirmPassword}
           onFocus={() => setMood("password")}
           onBlur={() => setMood("idle")}
         />

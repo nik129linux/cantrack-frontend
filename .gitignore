@@ -1,0 +1,16 @@
+node_modules/
+dist/
+
+# Secrets: the Supabase keys and the API URL live only on each machine.
+.env
+.env.*
+!.env.example
+
+# Local tooling output
+.playwright-mcp/
+__pycache__/
+.hypothesis/
+*.blend1
+
+# Stale local copy of the API (the real one is the cantrack-backend repo)
+apps/api-py/

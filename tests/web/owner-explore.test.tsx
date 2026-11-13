@@ -16,6 +16,9 @@ const mockParse = vi.fn();
 const mockFetchOffers = vi.fn();
 const mockPick = vi.fn();
 const mockOwnerRequests = vi.fn();
+const mockCancel = vi.fn();
+const mockRaise = vi.fn();
+const mockProfile = vi.fn();
 
 vi.mock("../../apps/web/src/lib/api.js", () => ({ fetchDogs: mockFetchDogs }));
 vi.mock("../../apps/web/src/lib/marketplace.js", () => ({
@@ -27,6 +30,9 @@ vi.mock("../../apps/web/src/lib/marketplace.js", () => ({
   fetchOffers: mockFetchOffers,
   pickOffer: mockPick,
   fetchOwnerRequests: mockOwnerRequests,
+  cancelWalk: mockCancel,
+  raiseRequest: mockRaise,
+  fetchOwnerProfile: mockProfile,
 }));
 
 vi.mock("../../apps/web/src/map/PickupMap.js", () => ({
@@ -78,12 +84,12 @@ async function renderScreen(props: { onPicked?: () => void } = {}) {
   const user = userEvent.setup();
   render(<OwnerExploreScreen userId="owner-1" {...props} />);
   await waitFor(() => expect(mockFetchDogs).toHaveBeenCalled());
-  await screen.findByRole("option", { name: "Luna" });
+  await screen.findByRole("radio", { name: "Luna" });
   return user;
 }
 
 async function fillAndPublish(user: ReturnType<typeof userEvent.setup>) {
-  await user.selectOptions(screen.getByLabelText("Perro"), "dog-1");
+  await user.click(screen.getByRole("radio", { name: "Luna" }));
   await user.type(screen.getByLabelText("Día y hora"), "2099-01-01T10:00");
   await user.click(screen.getByRole("button", { name: "Publicar" }));
 }
@@ -91,7 +97,7 @@ async function fillAndPublish(user: ReturnType<typeof userEvent.setup>) {
 describe("Owner Explorar (bidding)", () => {
   beforeEach(() => {
     cleanup();
-    for (const mock of [mockFetchDogs, mockFareSuggestion, mockNearby, mockCreate, mockParse, mockFetchOffers, mockPick, mockOwnerRequests]) {
+    for (const mock of [mockFetchDogs, mockFareSuggestion, mockNearby, mockCreate, mockParse, mockFetchOffers, mockPick, mockOwnerRequests, mockCancel, mockRaise, mockProfile]) {
       mock.mockReset();
     }
     mockFetchDogs.mockResolvedValue(DOGS);
@@ -99,6 +105,7 @@ describe("Owner Explorar (bidding)", () => {
     mockNearby.mockResolvedValue({ count: 4, radiusKm: 2 });
     mockOwnerRequests.mockResolvedValue({ items: [], nextCursor: null });
     mockFetchOffers.mockResolvedValue({ offers: [], etag: null });
+    mockProfile.mockResolvedValue({ walkers: [] });
   });
 
   afterEach(() => vi.useRealTimers());
@@ -162,9 +169,13 @@ describe("Owner Explorar (bidding)", () => {
     const cards = await within(panel).findAllByRole("listitem");
     expect(cards).toHaveLength(2);
     expect(within(cards[0]!).getByText("Mejor opción · el más cerca")).toBeInTheDocument();
-    expect(within(cards[0]!).getByText("Mateo · ★ 4.8 (23)")).toBeInTheDocument();
-    expect(within(cards[0]!).getByText(/a 0,6 km · llega en 10 min · \$14\.000/)).toBeInTheDocument();
-    expect(within(cards[1]!).getByText("Sara · Nuevo")).toBeInTheDocument();
+    expect(within(cards[0]!).getByText("Mateo")).toBeInTheDocument();
+    expect(within(cards[0]!).getByText("★ 4.8 (23)")).toBeInTheDocument();
+    expect(within(cards[0]!).getByText("a 0,6 km")).toBeInTheDocument();
+    expect(within(cards[0]!).getByText("llega en 10 min")).toBeInTheDocument();
+    expect(within(cards[0]!).getByText("$14.000")).toBeInTheDocument();
+    expect(within(cards[1]!).getByText("Sara")).toBeInTheDocument();
+    expect(within(cards[1]!).getByText("Nuevo")).toBeInTheDocument();
     expect(within(cards[1]!).queryByText(/Mejor opción/)).not.toBeInTheDocument();
   });
 
@@ -202,24 +213,64 @@ describe("Owner Explorar (bidding)", () => {
     const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
     const { OwnerExploreScreen } = await import("../../apps/web/src/owner/OwnerExploreScreen.js");
     render(<OwnerExploreScreen userId="owner-1" />);
-    await screen.findByRole("option", { name: "Luna" });
+    await screen.findByRole("radio", { name: "Luna" });
     await fillAndPublish(user);
-    await screen.findByText("Mateo · ★ 4.8 (23)");
+    await screen.findByText("★ 4.8 (23)");
 
     await vi.advanceTimersByTimeAsync(4100);
     expect(mockFetchOffers).toHaveBeenLastCalledWith("req-1", '"v1"');
     // A 304 keeps the list on screen.
-    expect(screen.getByText("Mateo · ★ 4.8 (23)")).toBeInTheDocument();
+    expect(screen.getByText("★ 4.8 (23)")).toBeInTheDocument();
   });
 
-  it("offers to raise $2.000 and republish when nobody offered by the deadline", async () => {
+  it("raises the same request $2.000 when nobody offered by the deadline (no duplicate)", async () => {
     mockCreate.mockResolvedValue(created({ deadlineAt: "2000-01-01T00:00:00+00:00" }));
+    mockRaise.mockResolvedValue({ id: "req-1", priceCop: 17000, deadlineAt: "2099-01-01T00:00:00+00:00" });
     const user = await renderScreen();
     await fillAndPublish(user);
 
-    await user.click(await screen.findByRole("button", { name: "Subir $2.000 y volver a publicar" }));
-    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(2));
-    expect(mockCreate).toHaveBeenLastCalledWith(expect.objectContaining({ priceCop: 17000 }));
+    await user.click(await screen.findByRole("button", { name: "Subir $2.000 y volver a abrir" }));
+    await waitFor(() => expect(mockRaise).toHaveBeenCalledWith("req-1", 17000));
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("Subimos tu oferta a $17.000 y la volvimos a abrir.")).toBeInTheDocument();
+  });
+
+  it("cancels the open request after a confirmation", async () => {
+    mockCreate.mockResolvedValue(created());
+    mockCancel.mockResolvedValue({ id: "req-1", status: "cancelled" });
+    const user = await renderScreen();
+    await fillAndPublish(user);
+
+    await user.click(await screen.findByRole("button", { name: "Cancelar solicitud" }));
+    expect(mockCancel).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Sí, cancelar" }));
+    await waitFor(() => expect(mockCancel).toHaveBeenCalledWith("req-1"));
+    expect(await screen.findByText("Cancelamos tu solicitud.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Ofertas recibidas" })).not.toBeInTheDocument();
+  });
+
+  it("marks the offers of a favorite walker", async () => {
+    mockProfile.mockResolvedValue({ walkers: [{ walkerId: "w1", name: "Mateo", walks: 3, favorite: true }] });
+    mockCreate.mockResolvedValue(created());
+    mockFetchOffers.mockResolvedValue({ offers: [offer(), offer({ offerId: "o2", walkerId: "w2", walkerName: "Sara" })], etag: '"v1"' });
+    const user = await renderScreen();
+    await fillAndPublish(user);
+
+    const cards = await within(await screen.findByRole("region", { name: "Ofertas recibidas" })).findAllByRole("listitem");
+    expect(within(cards[0]!).getByText("❤ Tu favorito")).toBeInTheDocument();
+    expect(within(cards[1]!).queryByText("❤ Tu favorito")).not.toBeInTheDocument();
+  });
+
+  it("asks to add a dog first when the owner has none", async () => {
+    mockFetchDogs.mockResolvedValue([]);
+    const onGo = vi.fn();
+    const { OwnerExploreScreen } = await import("../../apps/web/src/owner/OwnerExploreScreen.js");
+    const user = userEvent.setup();
+    render(<OwnerExploreScreen userId="owner-1" onGo={onGo} />);
+
+    await user.click(await screen.findByRole("button", { name: "Agregar mi perro" }));
+    expect(onGo).toHaveBeenCalledWith("dogs");
+    expect(screen.queryByRole("button", { name: "Publicar" })).not.toBeInTheDocument();
   });
 
   it("fills the form from the assistant, highlights what is missing and never publishes", async () => {
@@ -234,9 +285,9 @@ describe("Owner Explorar (bidding)", () => {
     await user.click(screen.getByRole("button", { name: "Llenar con el asistente" }));
 
     expect(await screen.findByText("Completa: hora")).toBeInTheDocument();
-    expect(screen.getByLabelText("Perro")).toHaveValue("dog-2");
+    expect(screen.getByRole("radio", { name: "Max" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "60 min" })).toBeChecked();
-    expect(screen.getByText("$18.000")).toBeInTheDocument();
+    expect(screen.getAllByText("$18.000").length).toBeGreaterThan(0);
     expect(mockCreate).not.toHaveBeenCalled();
   });
 

@@ -188,7 +188,8 @@ describe("App shell", () => {
     render(<App />);
 
     await openTab(user, "Mis perros");
-    expect(await screen.findByRole("button", { name: /add dog/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Mis perros" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Agregar perro" })).toBeInTheDocument();
   });
 
   it("logs out through the Salir button", async () => {
@@ -309,7 +310,8 @@ describe("App shell — glass navigation", () => {
     render(<App />);
 
     await openTab(user, "Perfil");
-    expect(await screen.findByRole("heading", { name: "Perfil", level: 1 })).toBeInTheDocument();
+    // The profile hero is titled with the owner's name.
+    expect(await screen.findByRole("heading", { name: "Camila", level: 1 })).toBeInTheDocument();
   });
 
   it("shows Mis paseos on the owner's Paseos tab", async () => {
@@ -332,7 +334,8 @@ describe("App shell — glass navigation", () => {
 
     await openTab(user, "Solicitudes");
     expect(await screen.findByRole("heading", { name: "Solicitudes", level: 1 })).toBeInTheDocument();
-    expect(await screen.findByText(/No hay solicitudes cerca/)).toBeInTheDocument();
+    // The walker starts offline: the screen asks to connect right there.
+    expect(await screen.findByRole("region", { name: "Estás desconectado" })).toBeInTheDocument();
   });
 
   it("shows the clients screen on the walker's Clientes tab", async () => {

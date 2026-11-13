@@ -10,13 +10,23 @@ const mockOpen = vi.fn();
 const mockSend = vi.fn();
 const mockWithdraw = vi.fn();
 const mockMine = vi.fn();
+const mockAvailability = vi.fn();
+const mockSetAvailability = vi.fn();
 
 vi.mock("../../apps/web/src/lib/marketplace.js", () => ({
   fetchOpenRequests: mockOpen,
   sendOffer: mockSend,
   withdrawOffer: mockWithdraw,
   fetchMyOffers: mockMine,
+  fetchAvailability: mockAvailability,
+  setAvailability: mockSetAvailability,
+  sendHeartbeat: vi.fn().mockResolvedValue({}),
   etaMinutes: (km: number) => Math.round((km / 4.5) * 60),
+}));
+vi.mock("../../apps/web/src/map/MarkersMap.js", () => ({
+  MarkersMap: ({ label, markers }: { label: string; markers: { label: string }[] }) => (
+    <div data-testid="map" aria-label={label} data-labels={markers.map((m) => m.label).join("|")} />
+  ),
 }));
 
 function card(over: Record<string, unknown> = {}) {
@@ -36,19 +46,35 @@ async function renderScreen(props: Record<string, unknown> = {}) {
   return user;
 }
 
+/** The screen inside the app's shared online switch, as HomeShell mounts it. */
+async function renderWithPresence(props: Record<string, unknown> = {}) {
+  const { WalkerRequestsScreen } = await import("../../apps/web/src/walker/WalkerRequestsScreen.js");
+  const { WalkerPresenceProvider } = await import("../../apps/web/src/walker/presence.js");
+  const user = userEvent.setup();
+  render(
+    <WalkerPresenceProvider walkerId="walker-1">
+      <WalkerRequestsScreen userId="walker-1" {...props} />
+    </WalkerPresenceProvider>,
+  );
+  return user;
+}
+
 describe("Walker Solicitudes", () => {
   beforeEach(() => {
     cleanup();
-    for (const mock of [mockOpen, mockSend, mockWithdraw, mockMine]) mock.mockReset();
+    for (const mock of [mockOpen, mockSend, mockWithdraw, mockMine, mockAvailability, mockSetAvailability]) mock.mockReset();
     mockOpen.mockResolvedValue([card()]);
     mockMine.mockResolvedValue([]);
+    mockAvailability.mockResolvedValue({ online: true, updatedAt: "x" });
   });
   afterEach(() => vi.useRealTimers());
 
   it("draws the card with distance, fare, owner and a countdown", async () => {
     await renderScreen();
 
-    expect(await screen.findByText(/Luna · 45 min · a 0,8 km/)).toBeInTheDocument();
+    expect(await screen.findByText("Luna")).toBeInTheDocument();
+    expect(screen.getByText("45 min")).toBeInTheDocument();
+    expect(screen.getByText("a 0,8 km")).toBeInTheDocument();
     expect(screen.getByText("$20.000")).toBeInTheDocument();
     expect(screen.getByText("Camila")).toBeInTheDocument();
     expect(screen.getByText(/Cierra en/)).toBeInTheDocument();
@@ -118,7 +144,7 @@ describe("Walker Solicitudes", () => {
     const user = await renderScreen();
 
     await user.click(await screen.findByRole("button", { name: "Aceptar $20.000" }));
-    await waitFor(() => expect(screen.queryByText(/Luna · 45 min/)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("Luna")).not.toBeInTheDocument());
   });
 
   it("explains an empty inbox", async () => {
@@ -130,7 +156,7 @@ describe("Walker Solicitudes", () => {
   it("polls the inbox every 10 s", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     await renderScreen();
-    await screen.findByText(/Luna · 45 min/);
+    await screen.findByText("Luna");
     const before = mockOpen.mock.calls.length;
 
     await vi.advanceTimersByTimeAsync(10_100);
@@ -152,5 +178,87 @@ describe("Walker Solicitudes", () => {
     expect(within(list).getAllByText("Esperando al dueño").length).toBeGreaterThan(0);
     await user.click(within(list).getByRole("button", { name: "Ver en Rutas" }));
     expect(onGoRoutes).toHaveBeenCalled();
+  });
+
+  it("offers the quick raises and sends the chosen one", async () => {
+    mockSend.mockResolvedValue({ id: "o1", score: 0.8, priceCop: 22000, kind: "counter" });
+    const user = await renderScreen();
+
+    await user.click(await screen.findByRole("button", { name: "Contraofertar" }));
+    await user.click(screen.getByRole("button", { name: "+$2.000" }));
+    expect(screen.getByText("$22.000")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Enviar contraoferta" }));
+    await waitFor(() => expect(mockSend).toHaveBeenCalledWith("r1", { kind: "counter", priceCop: 22000, etaMin: 11 }));
+  });
+
+  it("drops a card by itself when the owner stops taking offers", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockOpen.mockResolvedValue([card({ deadlineAt: new Date(Date.now() + 2000).toISOString() })]);
+    await renderScreen();
+    expect(await screen.findByText("Luna")).toBeInTheDocument();
+
+    await vi.advanceTimersByTimeAsync(3000);
+    await waitFor(() => expect(screen.queryByText("Luna")).not.toBeInTheDocument());
+  });
+
+  it("shows the pickup on a map on demand", async () => {
+    const user = await renderScreen();
+
+    await user.click(await screen.findByRole("button", { name: "Ver en el mapa" }));
+    expect(screen.getByTestId("map")).toHaveAttribute("data-labels", "Recogida · Luna");
+  });
+
+  it("asks to connect right here when the walker is offline", async () => {
+    mockAvailability.mockResolvedValue({ online: false, updatedAt: null });
+    mockOpen.mockResolvedValue([]);
+    mockSetAvailability.mockResolvedValue({ online: true, updatedAt: "x" });
+    Object.defineProperty(navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition: (ok: (p: unknown) => void) => ok({ coords: { latitude: 1.21, longitude: -77.28 } }) },
+    });
+    const user = await renderWithPresence();
+
+    const card = await screen.findByRole("region", { name: "Estás desconectado" });
+    expect(screen.getByRole("button", { name: /Desconectado/ })).toBeInTheDocument();
+    await user.click(within(card).getByRole("button", { name: "Conectarme" }));
+    await waitFor(() => expect(mockSetAvailability).toHaveBeenCalledWith("walker-1", true, { lat: 1.21, lng: -77.28 }));
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Estás desconectado" })).not.toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /En línea/ })).toBeInTheDocument();
+  });
+
+  it("announces a win when an offered request leaves the inbox", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockOpen
+      .mockResolvedValueOnce([card({ myOffer: { id: "o1", priceCop: 22000, kind: "counter" } })])
+      .mockResolvedValue([]);
+    mockMine.mockResolvedValue([
+      { offerId: "o1", requestId: "r1", dogName: "Luna", requestedTime: "2026-10-25T22:00:00+00:00", durationHours: 0.75, fareCop: 20000, priceCop: 22000, kind: "counter", status: "won", requestStatus: "assigned" },
+    ]);
+    const onGoRoutes = vi.fn();
+    await renderScreen({ onGoRoutes });
+    await screen.findByText("Oferta enviada · $22.000");
+
+    await vi.advanceTimersByTimeAsync(10_100);
+    const banner = await screen.findByText("Ganaste el paseo de Luna");
+    expect(mockMine).toHaveBeenCalledWith("walker-1", "won");
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await user.click(within(banner.parentElement as HTMLElement).getByRole("button", { name: "Ver en Rutas" }));
+    expect(onGoRoutes).toHaveBeenCalled();
+  });
+
+  it("keeps checking my offers while an owner is still deciding", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockMine.mockResolvedValue([
+      { offerId: "o2", requestId: "r2", dogName: "Max", requestedTime: "2026-10-25T22:00:00+00:00", durationHours: 0.75, fareCop: 12000, priceCop: 12000, kind: "accept", status: "pending", requestStatus: "open" },
+    ]);
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const { WalkerRequestsScreen } = await import("../../apps/web/src/walker/WalkerRequestsScreen.js");
+    render(<WalkerRequestsScreen userId="walker-1" />);
+
+    await user.click(await screen.findByRole("button", { name: "Mis ofertas" }));
+    await screen.findByText("Max · $12.000");
+    const before = mockMine.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(10_100);
+    expect(mockMine.mock.calls.length).toBeGreaterThan(before);
   });
 });

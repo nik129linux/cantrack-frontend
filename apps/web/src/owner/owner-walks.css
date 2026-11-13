@@ -1,0 +1,758 @@
+/* Mis paseos (owner): featured walk, tabs, day-grouped walk cards and the
+   detail (progress steps, live, report, stars). Glass and the shared form
+   controls come from owner-glass.css (`.oglass`). */
+
+.owalks__head {
+  padding: 2px 6px 0;
+}
+
+.owalks__head .explore__title,
+.owalks__head .explore__subtitle {
+  text-shadow: 0 1px 2px rgb(5 25 50 / 55%), 0 2px 14px rgb(5 25 50 / 45%);
+}
+
+.owalks__back {
+  justify-self: start;
+}
+
+/* Featured walk / detail hero (like "PRÓXIMO PASEO" on Inicio) ------------- */
+
+.owalks__feature,
+.owalks__hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 18px 18px 0;
+  overflow: hidden;
+  border: 0;
+  font: inherit;
+  text-align: left;
+}
+
+.owalks__feature {
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.owalks__feature:active {
+  transform: scale(0.99);
+}
+
+.owalks__feature-text,
+.owalks__hero-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding-bottom: 18px;
+}
+
+.owalks__feature-label {
+  color: var(--lime-text);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.owalks__feature-title,
+.owalks__hero-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.05;
+}
+
+.owalks__feature-sub,
+.owalks__hero-sub {
+  margin: 0;
+  color: rgb(255 255 255 / 86%);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.owalks__feature-cta {
+  margin-top: 6px;
+  color: var(--lime-text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.owalks__hero-art {
+  flex: none;
+  width: auto;
+  height: 124px;
+  filter: drop-shadow(0 6px 8px rgb(5 25 50 / 35%));
+  user-select: none;
+}
+
+.owalks__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.owalks__facts > * {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* Live dot ------------------------------------------------------------------- */
+
+.owalks__live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--lime-text);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.owalks__live-dot {
+  position: relative;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #7dff7a;
+}
+
+.owalks__live-dot::after {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: inherit;
+  content: "";
+  animation: owalks-pulse 1.6s var(--ease-out) infinite;
+}
+
+@keyframes owalks-pulse {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+/* Tabs ----------------------------------------------------------------------- */
+
+.owalks__tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+}
+
+.owalks__tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: rgb(255 255 255 / 82%);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out);
+}
+
+.owalks__tab[aria-selected="true"] {
+  background: linear-gradient(180deg, var(--lime-bright), var(--lime-deep));
+  color: var(--lime-ink);
+}
+
+.owalks__count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 18%);
+  font-size: 12px;
+}
+
+.owalks__tab[aria-selected="true"] .owalks__count {
+  background: rgb(16 38 15 / 15%);
+}
+
+/* Dog filter ----------------------------------------------------------------- */
+
+.owalks__dogs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.owalks__dog {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(10 32 58 / 45%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 25%);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.owalks__dog:has(.owalks__dog-initial) {
+  padding-left: 4px;
+}
+
+.owalks__dog[aria-pressed="true"] {
+  background: linear-gradient(180deg, var(--lime-bright), var(--lime-deep));
+  color: var(--lime-ink);
+}
+
+.owalks__dog-initial,
+.owalks__avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--lime-bright), var(--lime-deep));
+  color: var(--lime-ink);
+  font-family: var(--display);
+  font-weight: 600;
+}
+
+.owalks__dog[aria-pressed="true"] .owalks__dog-initial {
+  background: rgb(255 255 255 / 55%);
+}
+
+/* Day groups and walk cards ------------------------------------------------- */
+
+.owalks__group {
+  display: grid;
+  gap: 8px;
+}
+
+.owalks__day {
+  justify-self: start;
+  margin: 4px 0 0;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: rgb(10 32 58 / 50%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 22%);
+  color: #fff;
+  font-family: var(--display);
+  font-size: 1rem;
+  font-weight: 600;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.owalks__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.owalks__walk {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 22px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.owalks__walk:active {
+  transform: scale(0.985);
+}
+
+.owalks__walk[data-status="cancelled"],
+.owalks__walk[data-status="expired"] {
+  opacity: 0.78;
+}
+
+.owalks__walk .owalks__avatar {
+  width: 44px;
+  height: 44px;
+  font-size: 1.2rem;
+}
+
+.owalks__walk-main {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+}
+
+.owalks__walk-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.owalks__walk-top strong {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.owalks__walk-meta {
+  color: rgb(255 255 255 / 80%);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.owalks__walk-extra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  color: rgb(255 255 255 / 86%);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.owalks__walk-price {
+  flex: none;
+  align-self: flex-start;
+  color: var(--lime-text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.owalks__tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 14%);
+}
+
+.owalks__tag--lime {
+  background: linear-gradient(180deg, var(--lime-bright), var(--lime-deep));
+  color: var(--lime-ink);
+}
+
+/* Status chips --------------------------------------------------------------- */
+
+.owalks__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 16%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.owalks__chip[data-status="assigned"] {
+  background: rgb(205 240 122 / 22%);
+  color: var(--lime-text);
+}
+
+.owalks__chip[data-status="in_walk"] {
+  background: rgb(125 255 122 / 20%);
+  color: #b9ffb7;
+}
+
+.owalks__chip[data-status="cancelled"] {
+  background: rgb(255 110 90 / 22%);
+  color: #ffd9d1;
+}
+
+.owalks__chip[data-status="expired"] {
+  background: rgb(255 255 255 / 10%);
+  color: rgb(255 255 255 / 70%);
+}
+
+.owalks__chip[data-status="stale"] {
+  background: rgb(255 214 102 / 22%);
+  color: #ffe9a8;
+}
+
+/* Stars ---------------------------------------------------------------------- */
+
+.owalks__stars {
+  display: inline-flex;
+  gap: 1px;
+  letter-spacing: 0;
+}
+
+.owalks__stars span {
+  color: rgb(255 255 255 / 28%);
+}
+
+.owalks__stars span[data-on="true"] {
+  color: #ffd866;
+}
+
+.owalks__stars--lg {
+  font-size: 2rem;
+}
+
+.owalks__star-input {
+  display: flex;
+  gap: 4px;
+}
+
+.owalks__star-input button {
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: rgb(255 255 255 / 30%);
+  font-size: 2.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out), color 120ms;
+}
+
+.owalks__star-input button[data-on="true"] {
+  color: #ffd866;
+  text-shadow: 0 2px 10px rgb(255 216 102 / 45%);
+}
+
+.owalks__star-input button:hover:not(:disabled) {
+  transform: scale(1.12);
+}
+
+.owalks__star-input button:focus-visible {
+  outline: 3px solid var(--lime-text);
+  outline-offset: 2px;
+}
+
+/* Empty state ---------------------------------------------------------------- */
+
+.owalks__empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 22px 18px;
+  text-align: center;
+}
+
+.owalks__empty .mascot-sprite {
+  filter: drop-shadow(0 6px 8px rgb(5 25 50 / 35%));
+}
+
+.owalks__empty p {
+  max-width: 34ch;
+  margin: 0;
+  font-weight: 800;
+}
+
+.owalks__more {
+  justify-self: center;
+  min-width: 200px;
+}
+
+/* Detail cards --------------------------------------------------------------- */
+
+.owalks__card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.owalks__card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.owalks__card-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.owalks__muted {
+  color: rgb(255 255 255 / 76%);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.owalks__walker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+}
+
+.owalks__walker .owalks__avatar {
+  width: 48px;
+  height: 48px;
+  font-size: 1.3rem;
+}
+
+.owalks__walker-name {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.owalks__walker-meta {
+  margin: 2px 0 0;
+  color: rgb(255 255 255 / 80%);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Progress steps */
+.owalks__steps {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.owalks__steps li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  color: rgb(255 255 255 / 55%);
+  font-weight: 800;
+}
+
+.owalks__steps li:not(:last-child)::before {
+  position: absolute;
+  top: 26px;
+  bottom: -14px;
+  left: 8px;
+  width: 2px;
+  background: rgb(255 255 255 / 18%);
+  content: "";
+}
+
+.owalks__steps li[data-done="true"]:not(:last-child)::before {
+  background: var(--lime-deep);
+}
+
+.owalks__step-dot {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgb(255 255 255 / 35%);
+  border-radius: 50%;
+  background: rgb(10 32 58 / 60%);
+}
+
+.owalks__steps li[data-done="true"] {
+  color: #fff;
+}
+
+.owalks__steps li[data-done="true"] .owalks__step-dot {
+  border-color: var(--lime-bright);
+  background: linear-gradient(180deg, var(--lime-bright), var(--lime-deep));
+}
+
+.owalks__steps li[data-current="true"] .owalks__step-dot {
+  box-shadow: 0 0 0 5px rgb(205 240 122 / 25%);
+}
+
+.owalks__step-label {
+  flex: 1;
+}
+
+.owalks__step-time {
+  color: var(--lime-text);
+  font-size: 13px;
+}
+
+/* Live progress bar */
+.owalks__bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 16%);
+}
+
+.owalks__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--lime-deep), var(--lime-bright));
+  transition: width 600ms var(--ease-out);
+}
+
+/* Report metrics */
+.owalks__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+}
+
+.owalks__metrics div {
+  padding: 10px;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 18px;
+  background: rgb(255 255 255 / 10%);
+  text-align: center;
+}
+
+.owalks__metrics dt {
+  color: rgb(255 255 255 / 76%);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.owalks__metrics dd {
+  margin: 2px 0 0;
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.owalks__report-text {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 8%);
+  line-height: 1.45;
+}
+
+.owalks__card .explore__small {
+  justify-self: start;
+}
+
+/* Actions */
+.owalks__actions {
+  justify-items: center;
+}
+
+.owalks__actions > .explore__cta,
+.owalks__actions > .explore__small,
+.owalks__repeat {
+  width: min(100%, 360px);
+}
+
+.owalks__actions > .explore__small {
+  justify-self: center;
+}
+
+.owalks__repeat {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.owalks__confirm {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: min(100%, 360px);
+  padding: 12px;
+  border-radius: 18px;
+  background: rgb(255 110 90 / 14%);
+  text-align: center;
+}
+
+.owalks__confirm p {
+  margin: 0;
+  font-weight: 800;
+}
+
+.owalks__confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.owalks__rate {
+  justify-items: center;
+  text-align: center;
+}
+
+/* Focus ---------------------------------------------------------------------- */
+
+.owalks__feature:focus-visible,
+.owalks__walk:focus-visible,
+.owalks__tab:focus-visible,
+.owalks__dog:focus-visible {
+  outline: 3px solid var(--lime-text);
+  outline-offset: 2px;
+}
+
+/* Stale walk note: amber glass so it reads over any part of the scene. */
+.owalks__note {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: rgb(70 50 10 / 55%);
+  box-shadow: inset 0 0 0 1px rgb(255 214 102 / 40%);
+  color: #ffefc2;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.4;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+/* Phones --------------------------------------------------------------------- */
+
+@media (max-width: 520px) {
+  .owalks__hero-art {
+    height: 96px;
+  }
+
+  .owalks__feature-title,
+  .owalks__hero-title {
+    font-size: 1.7rem;
+  }
+
+  .owalks__tab {
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .owalks__live-dot::after {
+    animation: none;
+  }
+
+  .owalks__feature,
+  .owalks__walk,
+  .owalks__tab,
+  .owalks__bar span,
+  .owalks__star-input button {
+    transition: none;
+  }
+}

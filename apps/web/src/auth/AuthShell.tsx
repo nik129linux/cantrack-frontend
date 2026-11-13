@@ -63,7 +63,7 @@ export function AuthShell() {
             {view === "reset" ? <ResetPasswordScreen /> : null}
             {mood === "submitting" ? (
               <div className="auth-card__loading">
-                <DogLoader label={authCopy.loading[view]} />
+                <DogLoader label={authCopy.loading[view]} pose="run" />
               </div>
             ) : null}
           </div>
