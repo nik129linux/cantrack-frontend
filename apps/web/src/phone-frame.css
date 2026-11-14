@@ -27,6 +27,12 @@ body {
   display: contents;
 }
 
+/* Android paints a blue box over anything tapped; native apps don't.
+   Keyboard focus still shows through each control's :focus-visible ring. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 .iphone {
   position: relative;
 }

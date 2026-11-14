@@ -202,7 +202,15 @@ function OffersPanel({ request, favorites, onPicked, onRaised, onCancelled, onCl
   const [isBusy, setIsBusy] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const etag = useRef<string | null>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const now = useNow(1000);
+
+  // The panel sits above the form, far from the "Ver ofertas" button that
+  // opens it at the bottom of the screen: bring it into view.
+  useEffect(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    panelRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  }, [request.id]);
 
   const poll = useCallback(async () => {
     try {
@@ -275,7 +283,7 @@ function OffersPanel({ request, favorites, onPicked, onRaised, onCancelled, onCl
   const error = actionError ?? pollError;
 
   return (
-    <section className="oexplore__panel" aria-label="Ofertas recibidas">
+    <section className="oexplore__panel" aria-label="Ofertas recibidas" ref={panelRef}>
       <div className="glass oexplore__waiting">
         <div className="oexplore__waiting-text">
           <span className="oexplore__eyebrow">

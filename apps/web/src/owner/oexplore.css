@@ -607,10 +607,21 @@
   font-weight: 700;
 }
 
+/* Actions get their own full-width line under the request, one button per
+   row, so the dog/date text keeps the whole width above. */
 .oexplore__request-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: grid;
+  flex-basis: 100%;
+  gap: 8px;
+}
+
+.oexplore__request-actions .explore__small {
+  width: 100%;
+}
+
+/* Clear of the fixed "Salir" button when scrolled into view. */
+.oexplore__panel {
+  scroll-margin-top: calc(var(--safe-top, env(safe-area-inset-top, 0px)) + 70px);
 }
 
 .oexplore__more {
