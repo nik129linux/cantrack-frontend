@@ -5,6 +5,7 @@ import { CityPreview } from "./city/CityPreview.js";
 import { HomeDashboard } from "./home/HomeDashboard.js";
 import { GlobalDogLoader } from "./mascot/GlobalDogLoader.js";
 import { DeviceChrome } from "./DeviceChrome.js";
+import { PrivacyPage } from "./legal/PrivacyPage.js";
 import "./phone-frame.css";
 
 const rootElement = document.getElementById("root");
@@ -18,6 +19,9 @@ const previewPage = import.meta.env.DEV
   : null;
 
 function Root() {
+  if (window.location.pathname === "/privacidad") {
+    return <PrivacyPage />;
+  }
   if (previewPage === "city") {
     return <CityPreview />;
   }

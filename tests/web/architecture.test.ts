@@ -22,7 +22,14 @@ describe("frontend never runs or calls AI directly", () => {
   });
 
   it("imports no AI runtime or SDK", () => {
-    const banned = /@huggingface|onnxruntime|transformers|ollama|openai|anthropic/i;
+    // Code, not prose: an import/require of an AI package, or a call to an AI API
+    // host. The privacy policy may name the backend's AI provider in plain text.
+    const ai = "@huggingface|onnxruntime|transformers|ollama|openai|anthropic";
+    const banned = new RegExp(
+      `(?:from\\s+|import\\s*\\(\\s*|require\\s*\\(\\s*)["'][^"']*(?:${ai})` +
+        `|https?://[^"'\\s]*(?:${ai})`,
+      "i",
+    );
     const offenders = files.filter((f) => banned.test(readFileSync(f, "utf8")));
     expect(offenders).toEqual([]);
   });

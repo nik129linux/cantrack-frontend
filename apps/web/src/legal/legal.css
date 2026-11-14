@@ -1,0 +1,47 @@
+/* Public privacy page (/privacidad): layout only. The dark glass cards and the
+   white type come from home.css `.glass` and owner-glass.css `.oglass`; the
+   title and section headings reuse the `explore__title` / `explore__section`
+   classes. No new colors, fonts, radii or shadows. */
+
+.legal {
+  padding-bottom: 8px;
+}
+
+.legal__head {
+  padding: 2px 4px 0;
+}
+
+.legal__card {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+}
+
+.legal__card p {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+}
+
+.legal__card ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.legal__card li {
+  font-size: var(--text-body);
+  line-height: 1.5;
+}
+
+.legal__card strong {
+  font-weight: 800;
+}
+
+.legal__back {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  text-decoration: none;
+}
