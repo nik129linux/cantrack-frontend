@@ -248,7 +248,7 @@
   opacity: 0.8;
 }
 
-@media (max-width: 520px) {
+@container app (max-width: 520px) {
   .wreq__top {
     grid-template-columns: auto minmax(0, 1fr);
   }

@@ -44,7 +44,7 @@
   gap: 14px;
   width: min(100%, 560px);
   margin: 0 auto;
-  padding: max(18px, env(safe-area-inset-top)) 14px calc(110px + env(safe-area-inset-bottom));
+  padding: max(18px, var(--safe-top, env(safe-area-inset-top, 0px))) 14px calc(110px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 .home__greeting {
@@ -85,7 +85,7 @@
 .home__nav {
   position: fixed;
   right: 12px;
-  bottom: max(12px, env(safe-area-inset-bottom));
+  bottom: max(12px, var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
   left: 12px;
   z-index: 20;
   display: flex;
@@ -492,7 +492,7 @@
 
 .home__logout {
   position: fixed;
-  top: max(14px, env(safe-area-inset-top));
+  top: max(14px, var(--safe-top, env(safe-area-inset-top, 0px)));
   right: 14px;
   z-index: 20;
   min-height: 44px;
@@ -512,7 +512,7 @@
 
 .home__grid--screen {
   display: block;
-  padding-top: max(66px, calc(env(safe-area-inset-top) + 56px));
+  padding-top: max(66px, calc(var(--safe-top, env(safe-area-inset-top, 0px)) + 56px));
 }
 
 .home__screen {
@@ -525,7 +525,7 @@
 
 /* Wide screens ---------------------------------------------------------------- */
 
-@media (min-width: 900px) {
+@container app (min-width: 900px) {
   .home__nav {
     top: 20px;
     right: auto;
@@ -588,7 +588,7 @@
   .home__list { grid-area: list; align-self: start; }
 }
 
-@media (min-width: 900px) {
+@container app (min-width: 900px) {
   .home__grid:not(:has(.home__request)) {
     grid-template-areas:
       "greeting greeting weather"

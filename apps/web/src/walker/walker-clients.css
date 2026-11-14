@@ -314,14 +314,14 @@
 
 /* Phone ------------------------------------------------------------------------ */
 
-@media (min-width: 900px) {
+@container app (min-width: 900px) {
   .wclients__toolbar {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
   }
 }
 
-@media (max-width: 560px) {
+@container app (max-width: 560px) {
   .wclients__card,
   .wclients__hero {
     grid-template-columns: auto minmax(0, 1fr);

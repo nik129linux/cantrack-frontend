@@ -96,9 +96,9 @@ body:has(.auth-scene) {
   align-items: center;
   min-height: 100dvh;
   padding:
-    max(20px, env(safe-area-inset-top))
+    max(20px, var(--safe-top, env(safe-area-inset-top, 0px)))
     16px
-    max(28px, env(safe-area-inset-bottom));
+    max(28px, var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 .auth-wordmark {
@@ -919,7 +919,7 @@ body:has(.auth-scene) {
 
 /* Wide screens: hero on the left, card on the right ----------------------------------------- */
 
-@media (min-width: 900px) {
+@container app (min-width: 900px) {
   .auth-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 440px;

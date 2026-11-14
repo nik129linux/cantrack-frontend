@@ -240,7 +240,7 @@
 
 /* Phone ------------------------------------------------------------------------------ */
 
-@media (max-width: 520px) {
+@container app (max-width: 520px) {
   .wprofile__stats {
     grid-template-columns: repeat(2, 1fr);
     justify-self: stretch;

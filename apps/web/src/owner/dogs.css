@@ -340,7 +340,7 @@ textarea.dogs__input {
   display: none;
 }
 
-@media (min-width: 900px) {
+@container app (min-width: 900px) {
   .dogs__placeholder {
     display: block;
   }

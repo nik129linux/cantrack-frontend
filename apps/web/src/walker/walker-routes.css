@@ -397,7 +397,7 @@
   font-size: 14px;
 }
 
-@media (max-width: 900px) {
+@container app (max-width: 900px) {
   .wroute__grid {
     grid-template-columns: 1fr;
   }
@@ -413,7 +413,7 @@
   }
 }
 
-@media (max-width: 520px) {
+@container app (max-width: 520px) {
   .wroute__active-body {
     grid-template-columns: 1fr;
     justify-items: center;
@@ -524,7 +524,7 @@
   flex: 1 1 200px;
 }
 
-@media (max-width: 520px) {
+@container app (max-width: 520px) {
   .wnav__map .pickup-map__canvas {
     height: 340px;
     min-height: 340px;

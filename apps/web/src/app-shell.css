@@ -31,7 +31,7 @@
   align-content: start;
   min-width: 0;
   /* clearance for the fixed bottom tab bar */
-  padding-bottom: calc(104px + env(safe-area-inset-bottom));
+  padding-bottom: calc(104px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 .app-shell__topbar {
@@ -477,7 +477,7 @@
 
 /* Desktop: the column is already centered at 480px; give it a little air ------- */
 
-@media (min-width: 560px) {
+@container app (min-width: 560px) {
   .app-shell {
     padding: 24px 20px 0;
   }

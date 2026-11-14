@@ -484,7 +484,7 @@ button.ui-listrow:hover {
   transform: translateX(-50%);
   justify-content: space-around;
   gap: 4px;
-  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  padding: 8px 10px calc(8px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
   border-radius: var(--radius-card) var(--radius-card) 0 0;
   background: var(--c-surface);
   box-shadow: 0 -10px 30px rgb(20 48 31 / 10%);

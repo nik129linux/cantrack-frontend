@@ -627,7 +627,7 @@
 
 /* Phones --------------------------------------------------------------------- */
 
-@media (max-width: 520px) {
+@container app (max-width: 520px) {
   .oexplore__durations {
     grid-template-columns: repeat(3, 1fr);
     border-radius: 24px;

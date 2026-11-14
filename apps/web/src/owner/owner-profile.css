@@ -366,7 +366,7 @@
 
 /* Phones -------------------------------------------------------------------- */
 
-@media (max-width: 520px) {
+@container app (max-width: 520px) {
   .oprofile__hero {
     grid-template-columns: 1fr;
     justify-items: center;

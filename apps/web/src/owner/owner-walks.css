@@ -728,7 +728,7 @@
 
 /* Phones --------------------------------------------------------------------- */
 
-@media (max-width: 520px) {
+@container app (max-width: 520px) {
   .owalks__hero-art {
     height: 96px;
   }

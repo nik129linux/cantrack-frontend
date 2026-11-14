@@ -24,7 +24,7 @@
   z-index: 60;
   left: 50%;
   /* Above the phone bottom bar; desktop drops it to the corner below. */
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
+  bottom: calc(var(--safe-bottom, env(safe-area-inset-bottom, 0px)) + 96px);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -73,7 +73,7 @@
   to { opacity: 0; transform: translate(-50%, 10px) scale(0.92); }
 }
 
-@media (min-width: 900px) {
+@container app (min-width: 900px) {
   .mascot-capsule {
     right: 28px;
     bottom: 28px;

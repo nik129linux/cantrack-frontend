@@ -1,0 +1,222 @@
+/* The app always renders as a phone, whatever the window size.
+   .phone-frame is the size container every layout query measures
+   (`@container app (...)` instead of `@media`), so a wide window still gets
+   the mobile layout. Its containment also makes it the containing block for
+   position: fixed, so bottom bars and full-bleed backgrounds stay inside it.
+   The frame itself doesn't scroll; .phone-frame__scroll does, which keeps
+   fixed children pinned while the content moves.
+
+   On a real phone the frame is the whole screen. On a wide screen it is
+   drawn as an iPhone (.iphone): titanium edge, Dynamic Island, status bar,
+   home indicator; --safe-top/--safe-bottom stand in for the safe-area
+   insets the screens already respect. */
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  background: #0d1a14;
+}
+
+#root {
+  display: contents;
+}
+
+.iphone {
+  position: relative;
+}
+
+.phone-frame {
+  container: app / inline-size;
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  contain: layout paint;
+  transform: translateZ(0);
+  background: var(--c-bg);
+}
+
+.phone-frame__scroll {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Phones don't show scrollbars; neither does the frame. */
+.phone-frame,
+.phone-frame * {
+  scrollbar-width: none !important;
+}
+
+.phone-frame ::-webkit-scrollbar {
+  display: none;
+}
+
+.device-chrome,
+.iphone__button {
+  display: none;
+}
+
+/* Wide screen: show it as an iPhone ------------------------------------- */
+
+@media (min-width: 600px) and (min-height: 640px) {
+  body {
+    background:
+      radial-gradient(60% 55% at 50% 45%, rgb(166 212 74 / 22%), transparent 70%),
+      radial-gradient(40% 40% at 15% 10%, rgb(76 155 224 / 25%), transparent 70%),
+      radial-gradient(45% 45% at 85% 90%, rgb(31 122 53 / 30%), transparent 70%),
+      #0d1a14;
+  }
+
+  .iphone {
+    --screen-h: min(852px, calc(100dvh - 72px));
+    padding: 11px;
+    border-radius: 66px;
+    background: #050505;
+    /* titanium edge: a light rim, a darker band, then the glass bezel */
+    box-shadow:
+      0 0 0 2px #8a8f94,
+      0 0 0 4px #3c4045,
+      0 0 0 5px #a9aeb3,
+      0 40px 90px -10px rgb(0 0 0 / 60%),
+      0 18px 40px rgb(0 0 0 / 35%);
+  }
+
+  .phone-frame {
+    --safe-top: 54px;
+    --safe-bottom: 22px;
+    width: 393px;
+    height: var(--screen-h);
+    border-radius: 55px;
+  }
+
+  .device-chrome {
+    display: block;
+    position: absolute;
+    z-index: 100;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .device-chrome__status {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 54px;
+    padding: 0 30px 0 44px;
+    color: #0b1b2b;
+  }
+
+  .device-chrome__time {
+    width: 60px;
+    font-family: -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .device-chrome__island {
+    position: absolute;
+    top: 11px;
+    left: 50%;
+    width: 124px;
+    height: 36px;
+    border-radius: 20px;
+    background: #000;
+    transform: translateX(-50%);
+  }
+
+  .device-chrome__icons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .device-chrome__icons svg {
+    fill: currentColor;
+  }
+
+  .device-chrome__battery {
+    position: relative;
+    display: block;
+    width: 25px;
+    height: 12px;
+    padding: 1.5px;
+    border: 1px solid rgb(11 27 43 / 45%);
+    border-radius: 4px;
+  }
+
+  .device-chrome__battery::after {
+    content: "";
+    position: absolute;
+    top: 3.5px;
+    right: -3.5px;
+    width: 2px;
+    height: 4px;
+    border-radius: 0 1px 1px 0;
+    background: rgb(11 27 43 / 45%);
+  }
+
+  .device-chrome__battery span {
+    display: block;
+    width: 78%;
+    height: 100%;
+    border-radius: 2px;
+    background: currentColor;
+  }
+
+  .device-chrome__home {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    width: 134px;
+    height: 5px;
+    border-radius: 3px;
+    background: rgb(11 27 43 / 75%);
+    transform: translateX(-50%);
+  }
+
+  /* Side buttons: action + volume on the left, power on the right. */
+  .iphone__button {
+    display: block;
+    position: absolute;
+    width: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #6b7075, #b4b9be 50%, #6b7075);
+  }
+
+  .iphone__button--action {
+    top: 120px;
+    left: -8px;
+    height: 32px;
+  }
+
+  .iphone__button--up {
+    top: 175px;
+    left: -8px;
+    height: 58px;
+  }
+
+  .iphone__button--down {
+    top: 245px;
+    left: -8px;
+    height: 58px;
+  }
+
+  .iphone__button--power {
+    top: 200px;
+    right: -8px;
+    height: 92px;
+  }
+}

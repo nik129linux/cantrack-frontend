@@ -1030,13 +1030,13 @@
 
 /* Phones ------------------------------------------------------------------- */
 
-@media (max-width: 899px) {
+@container app (max-width: 899px) {
   .whome__city {
     display: none;
   }
 }
 
-@media (max-width: 480px) {
+@container app (max-width: 480px) {
   .whome__status {
     grid-template-columns: auto minmax(0, 1fr);
   }
@@ -1049,7 +1049,7 @@
 
 /* Desktop: one area per card, so nothing stacks on top of another. ------- */
 
-@media (min-width: 900px) {
+@container app (min-width: 900px) {
   .home__grid.whome {
     grid-template-areas:
       "greeting greeting weather"
