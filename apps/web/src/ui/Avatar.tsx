@@ -32,6 +32,7 @@ export function Avatar({ src, alt, name, size = 48 }: AvatarProps) {
         alt={alt}
         width={size}
         height={size}
+        style={style}
         onError={() => setImageBroken(true)}
       />
     );
