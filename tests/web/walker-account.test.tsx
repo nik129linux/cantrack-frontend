@@ -164,6 +164,7 @@ describe("Walker Rutas", () => {
     expect(within(card).getByRole("link", { name: "Llamar a Camila" })).toHaveAttribute("href", "tel:3001234567");
 
     await user.click(within(card).getByRole("button", { name: "Iniciar paseo de Max" }));
+    await user.click(await screen.findByRole("button", { name: "Iniciar sin foto" }));
     await waitFor(() => expect(mockCheckIn).toHaveBeenCalledWith("b2"));
     expect(await screen.findByText(/Paseo con Max iniciado/)).toBeInTheDocument();
     expect(mockRoute).toHaveBeenCalledTimes(2);
@@ -239,6 +240,7 @@ describe("Walker Rutas", () => {
     expect(within(nav).queryByRole("link", { name: /Google|Waze/ })).not.toBeInTheDocument();
 
     await user.click(within(nav).getByRole("button", { name: "Iniciar paseo de Max" }));
+    await user.click(await screen.findByRole("button", { name: "Iniciar sin foto" }));
     await waitFor(() => expect(mockCheckIn).toHaveBeenCalledWith("b2"));
     expect(await screen.findByText(/Paseo con Max iniciado/)).toBeInTheDocument();
   });
@@ -350,6 +352,7 @@ describe("Walker Rutas", () => {
 
     const next = await screen.findByRole("region", { name: "Siguiente parada" });
     await user.click(within(next).getByRole("button", { name: "Iniciar paseo de Max" }));
+    await user.click(await screen.findByRole("button", { name: "Iniciar sin foto" }));
     const active = await screen.findByRole("region", { name: "Paseo en curso con Max" });
     await user.click(within(active).getByRole("button", { name: "Terminar paseo" }));
     await user.click(within(active).getByRole("button", { name: "Sí, terminar" }));

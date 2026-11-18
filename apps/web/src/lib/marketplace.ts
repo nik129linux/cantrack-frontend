@@ -838,11 +838,29 @@ export function fetchApproach(requestId: string): Promise<Approach> {
   return request(`/bidding/requests/${enc(requestId)}/approach`, { mascot: false });
 }
 
-export type WalkTransition = { id: string; status: string; walkerId: string | null };
+/**
+ * The server's read of the check-in photo. Advice only: the walk starts anyway.
+ * `similarity` is a raw cosine score, not a certainty; never show it as a percentage.
+ */
+export type CheckInAi = {
+  match: "match" | "uncertain" | "unknown" | "unavailable";
+  similarity: number | null;
+};
 
-/** Start a won walk (assigned → in_walk). */
-export function checkInWalk(requestId: string): Promise<WalkTransition> {
-  return request(`/bidding/requests/${enc(requestId)}/check-in`, { method: "POST" });
+export type WalkTransition = { id: string; status: string; walkerId: string | null; ai?: CheckInAi };
+
+/**
+ * Start a won walk (assigned → in_walk). With a photo of the dog, the answer
+ * also carries `ai`; the sheet shows its own loader, so the global mascot stays off.
+ */
+export function checkInWalk(requestId: string, photo?: Blob): Promise<WalkTransition> {
+  const path = `/bidding/requests/${enc(requestId)}/check-in`;
+  if (photo === undefined) {
+    return request(path, { method: "POST" });
+  }
+  const body = new FormData();
+  body.append("image", photo, "dog.jpg");
+  return request(path, { method: "POST", body, mascot: false });
 }
 
 /** Finish the walk in progress (in_walk → done). */
