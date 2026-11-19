@@ -55,6 +55,9 @@ export function exploreError(error: unknown, fallback: string): string {
         ? "Ya usaste el asistente 10 veces hoy"
         : `Espera ${error.retryAfter ?? "unos"} s antes de intentarlo de nuevo.`;
     }
+    if (error.status === 400 && /three times the recommended/i.test(error.message)) {
+      return "El precio no puede pasar de 3 veces el recomendado.";
+    }
     if (error.status === 403) {
       return "No tienes acceso a esta solicitud";
     }
@@ -556,6 +559,8 @@ export function OwnerExploreScreen({ userId, onPicked = () => undefined, onGo }:
           setSuggestion(result);
           if (keepFare.current) {
             keepFare.current = false;
+            // A fare the assistant filled still has to respect the new ceiling.
+            if (result.maxCop !== undefined) setFare((current) => Math.min(current, result.maxCop));
           } else {
             setFare(result.suggestedCop);
           }
@@ -582,6 +587,8 @@ export function OwnerExploreScreen({ userId, onPicked = () => undefined, onGo }:
 
   const step = suggestion?.stepCop ?? 1000;
   const minFare = suggestion?.minCop ?? 8000;
+  // A fare may not pass three times the recommended price (the API enforces it too).
+  const maxFare = Math.min(MAX_FARE_COP, suggestion?.maxCop ?? MAX_FARE_COP);
 
   async function publish(input: BiddingRequestInput) {
     setIsSending(true);
@@ -890,8 +897,8 @@ export function OwnerExploreScreen({ userId, onPicked = () => undefined, onGo }:
                 type="button"
                 className="explore__round"
                 aria-label="Subir tarifa"
-                disabled={fare + step > MAX_FARE_COP}
-                onClick={() => setFare((current) => Math.min(MAX_FARE_COP, current + step))}
+                disabled={fare + step > maxFare}
+                onClick={() => setFare((current) => Math.min(maxFare, current + step))}
               >
                 <PlusIcon />
               </button>
@@ -914,7 +921,7 @@ export function OwnerExploreScreen({ userId, onPicked = () => undefined, onGo }:
               title="Tu oferta"
               value={fare}
               min={minFare}
-              max={MAX_FARE_COP}
+              max={maxFare}
               onConfirm={(next) => {
                 setFare(next);
                 setIsFareOpen(false);

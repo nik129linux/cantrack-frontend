@@ -75,7 +75,7 @@ vi.mock("../../apps/web/src/lib/marketplace.js", async (importOriginal) => ({
   }),
   fetchWeather: vi.fn().mockRejectedValue(new Error("no weather in tests")),
   fetchOwnerRequests: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
-  fetchFareSuggestion: vi.fn().mockResolvedValue({ suggestedCop: 15000, basis: "default", sampleSize: 0, minCop: 8000, stepCop: 1000 }),
+  fetchFareSuggestion: vi.fn().mockResolvedValue({ suggestedCop: 15000, basis: "default", sampleSize: 0, minCop: 8000, stepCop: 1000, maxCop: 45000 }),
   fetchNearbyWalkers: vi.fn().mockResolvedValue({ count: 0, radiusKm: 2 }),
   // Walker screens.
   fetchWalkerHome: vi.fn().mockResolvedValue({

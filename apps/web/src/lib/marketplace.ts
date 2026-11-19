@@ -192,6 +192,8 @@ export type FareSuggestion = {
   sampleSize: number;
   minCop: number;
   stepCop: number;
+  /** Ceiling for a fare: three times the recommended price. */
+  maxCop: number;
 };
 
 export function fetchFareSuggestion(
@@ -692,6 +694,8 @@ export type RequestCard = {
   durationHours: number;
   deadlineAt: string;
   fareCop: number;
+  /** Highest counter offer: twice the fare, capped at three times the recommended price. */
+  maxCounterCop: number;
   priceCop: number;
   pickupLat: number;
   pickupLng: number;

@@ -105,7 +105,7 @@ describe("Owner Explorar (bidding)", () => {
     window.localStorage.clear();
     window.localStorage.setItem(HOME_KEY, JSON.stringify(SAVED_HOME));
     mockFetchDogs.mockResolvedValue(DOGS);
-    mockFareSuggestion.mockResolvedValue({ suggestedCop: 15000, basis: "market", sampleSize: 12, minCop: 8000, stepCop: 1000 });
+    mockFareSuggestion.mockResolvedValue({ suggestedCop: 15000, basis: "market", sampleSize: 12, minCop: 8000, stepCop: 1000, maxCop: 45000 });
     mockNearby.mockResolvedValue({ count: 4, radiusKm: 2 });
     mockOwnerRequests.mockResolvedValue({ items: [], nextCursor: null });
     mockFetchOffers.mockResolvedValue({ offers: [], etag: null });
@@ -157,6 +157,27 @@ describe("Owner Explorar (bidding)", () => {
     expect(screen.getByRole("button", { name: "Editar oferta, $23.500" })).toBeInTheDocument();
     await fillAndPublish(user);
     await waitFor(() => expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ priceCop: 23500 })));
+  });
+
+  it("stops the offer at three times the recommended price", async () => {
+    // Recommended $15.000 (the mock above), so the ceiling is $45.000.
+    const user = await renderScreen();
+    await user.click(screen.getByRole("button", { name: /Editar oferta/ }));
+    expect(screen.getByText(/máximo \$45\.000/)).toBeInTheDocument();
+    for (const digit of ["4", "6", "0", "0", "0"]) {
+      await user.click(screen.getByRole("button", { name: digit }));
+    }
+    expect(screen.getByRole("button", { name: "Listo" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Borrar" }));
+    await user.click(screen.getByRole("button", { name: "Borrar" }));
+    await user.click(screen.getByRole("button", { name: "Borrar" }));
+    await user.click(screen.getByRole("button", { name: "Borrar" }));
+    await user.click(screen.getByRole("button", { name: "5" }));
+    await user.click(screen.getByRole("button", { name: "000" }));
+    await user.click(screen.getByRole("button", { name: "Listo" }));
+
+    expect(screen.getByRole("button", { name: "Editar oferta, $45.000" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Subir tarifa" })).toBeDisabled();
   });
 
   it("validates the form before calling the API", async () => {

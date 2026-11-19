@@ -53,6 +53,9 @@ export function offerError(error: unknown, fallback = "No pudimos enviar tu ofer
     if (error.status === 409 && /no longer open/i.test(text)) {
       return "El dueño ya eligió";
     }
+    if (error.status === 400 && /three times the recommended/i.test(text)) {
+      return "La contraoferta no puede pasar de 3 veces el precio recomendado.";
+    }
     if (error.status === 403) {
       return "Esta solicitud ya no está disponible";
     }
@@ -118,7 +121,8 @@ function InboxCard({ card, onChanged, onDrop, onGoHome }: CardProps) {
   const { position } = useWalkerPresence();
   const seconds = useSecondsLeft(card.deadlineAt);
   const eta = etaMinutes(card.distanceKm);
-  const maxCounter = card.fareCop * 2;
+  // Twice the fare, and never above three times the recommended price (the API sends the lower).
+  const maxCounter = card.maxCounterCop ?? card.fareCop * 2;
   const minCounter = Math.max(MIN_COUNTER_COP, STEP_COP);
   const dogName = card.dogName ?? "Un perro";
   const dropped = useRef(false);
