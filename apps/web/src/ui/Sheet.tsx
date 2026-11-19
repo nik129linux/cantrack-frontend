@@ -5,6 +5,8 @@ export type SheetProps = {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** Extra class on the sheet root, so a caller can restyle it (e.g. a dark glass sheet). */
+  className?: string;
   children?: ReactNode;
 };
 
@@ -19,7 +21,7 @@ const FOCUSABLE =
  * Escape and a backdrop click call onClose (clicks inside the sheet do not).
  * Renders nothing at all while closed.
  */
-export function Sheet({ open, onClose, title, children }: SheetProps) {
+export function Sheet({ open, onClose, title, className, children }: SheetProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<Element | null>(null);
   const closeRef = useRef(onClose);
@@ -94,7 +96,7 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
   }
 
   return (
-    <div className="ui-sheet">
+    <div className={className === undefined ? "ui-sheet" : `ui-sheet ${className}`}>
       <div
         className="ui-sheet__backdrop"
         data-backdrop=""
