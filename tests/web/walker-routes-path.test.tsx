@@ -86,6 +86,28 @@ describe("Rutas map", () => {
     expect(lastMapProps.current.connect).toBe(true);
   });
 
+  it("draws no line once every walk of the day is done", async () => {
+    const done = dayRoute();
+    done.stops = done.stops.map((stop) => ({ ...stop, status: "done" }));
+    mockRoute.mockResolvedValue(done);
+    mockPath.mockResolvedValue({ source: "straight", distanceKm: 0, minutes: 0, geometry: [] });
+    await open();
+    await waitFor(() => expect(mockPath).toHaveBeenCalled());
+    await waitFor(() => expect(lastMapProps.current.connect).toBe(false));
+    expect(lastMapProps.current.path ?? null).toBeNull();
+  });
+
+  it("no straight line to finished walks even when the street line fails", async () => {
+    const done = dayRoute();
+    done.stops = done.stops.map((stop) => ({ ...stop, status: "done" }));
+    mockRoute.mockResolvedValue(done);
+    mockPath.mockRejectedValue(new Error("down"));
+    await open();
+    await waitFor(() => expect(mockPath).toHaveBeenCalled());
+    expect(lastMapProps.current.connect).toBe(false);
+    expect(lastMapProps.current.path ?? null).toBeNull();
+  });
+
   it("an empty line (fewer than two points) is not drawn", async () => {
     mockPath.mockResolvedValue({ source: "straight", distanceKm: 0, minutes: 0, geometry: [] });
     await open();

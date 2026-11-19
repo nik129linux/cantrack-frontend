@@ -725,7 +725,14 @@ export function WalkerRoutesScreen({ userId, onGoHome = () => undefined, onGoReq
     return pins;
   }, [route]);
 
-  const streetLine = dayPath !== null && dayPath.date === date && dayPath.line.geometry.length > 1 ? dayPath.line : null;
+  const answered = dayPath !== null && dayPath.date === date;
+  const streetLine = answered && dayPath.line.geometry.length > 1 ? dayPath.line : null;
+  // The line is what is still to walk. When the server answered and nothing is
+  // left (every walk of the day is done), no line is drawn: joining the pins would
+  // draw a straight line to walks already finished. The pin-to-pin trail stays
+  // only as the fallback while the street line is missing and walks are pending.
+  const hasPending = route?.stops.some((stop) => stop.status !== "done") ?? false;
+  const joinPins = !answered && hasPending;
 
   // "Iniciar paseo" first opens the photo sheet; the walk starts from there.
   const startWalk = (requestId: string, dog: string | null) => {
@@ -905,7 +912,7 @@ export function WalkerRoutesScreen({ userId, onGoHome = () => undefined, onGoReq
             <MarkersMap
               label="Mapa de la ruta"
               markers={markers}
-              connect
+              connect={joinPins}
               focus={focus}
               path={streetLine?.geometry ?? null}
               pathStraight={streetLine?.source === "straight"}
