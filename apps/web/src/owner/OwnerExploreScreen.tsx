@@ -23,7 +23,8 @@ import {
   type Offer,
   type OwnerRequestItem,
 } from "../lib/marketplace.js";
-import { MinusIcon, PlusIcon } from "../home/icons.js";
+import { MinusIcon, PencilIcon, PlusIcon } from "../home/icons.js";
+import { PriceKeypad } from "../ui/PriceKeypad.js";
 import { PickupField, type PickupValue } from "../map/PickupField.js";
 import { clampLabel, isInsidePasto } from "../map/pasto.js";
 import { rememberPickup } from "../map/recentPickups.js";
@@ -460,6 +461,7 @@ export function OwnerExploreScreen({ userId, onPicked = () => undefined, onGo }:
   const [minutes, setMinutes] = useState<number>(45);
   const [when, setWhen] = useState("");
   const [fare, setFare] = useState(15000);
+  const [isFareOpen, setIsFareOpen] = useState(false);
   const [suggestion, setSuggestion] = useState<FareSuggestion | null>(null);
   const [pickup, setPickup] = useState<PickupValue | null>(home);
   const [nearby, setNearby] = useState<number | null>(null);
@@ -874,7 +876,15 @@ export function OwnerExploreScreen({ userId, onPicked = () => undefined, onGo }:
                 <MinusIcon />
               </button>
               <p className="explore__fare-value" aria-live="polite">
-                {formatCop(fare)}
+                <button
+                  type="button"
+                  className="explore__fare-edit"
+                  aria-label={`Editar oferta, ${formatCop(fare)}`}
+                  onClick={() => setIsFareOpen(true)}
+                >
+                  {formatCop(fare)}
+                  <PencilIcon />
+                </button>
               </p>
               <button
                 type="button"
@@ -899,6 +909,18 @@ export function OwnerExploreScreen({ userId, onPicked = () => undefined, onGo }:
                 ) : null}
               </div>
             ) : null}
+            <PriceKeypad
+              open={isFareOpen}
+              title="Tu oferta"
+              value={fare}
+              min={minFare}
+              max={MAX_FARE_COP}
+              onConfirm={(next) => {
+                setFare(next);
+                setIsFareOpen(false);
+              }}
+              onClose={() => setIsFareOpen(false)}
+            />
           </section>
 
           <div className="glass oexplore__submit">

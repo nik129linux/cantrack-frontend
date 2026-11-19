@@ -145,6 +145,20 @@ describe("Owner Explorar (bidding)", () => {
     expect(mockFareSuggestion).toHaveBeenLastCalledWith(60, expect.any(Number), expect.any(Number));
   });
 
+  it("types the offer on the number pad and publishes that price", async () => {
+    const user = await renderScreen();
+    await user.click(screen.getByRole("button", { name: /Editar oferta/ }));
+    for (const digit of ["2", "3", "5", "0", "0"]) {
+      await user.click(screen.getByRole("button", { name: digit }));
+    }
+    await user.click(screen.getByRole("button", { name: "Listo" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Editar oferta, $23.500" })).toBeInTheDocument();
+    await fillAndPublish(user);
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ priceCop: 23500 })));
+  });
+
   it("validates the form before calling the API", async () => {
     const user = await renderScreen();
     await user.click(screen.getByRole("button", { name: "Publicar" }));

@@ -112,6 +112,21 @@ describe("Walker Solicitudes", () => {
     await waitFor(() => expect(mockSend).toHaveBeenCalledWith("r1", { kind: "counter", priceCop: 22000, etaMin: 11 }));
   });
 
+  it("types the counter-offer on the number pad", async () => {
+    mockSend.mockResolvedValue({ id: "o1", score: 0.8, priceCop: 23700, kind: "counter" });
+    const user = await renderScreen();
+
+    await user.click(await screen.findByRole("button", { name: "Contraofertar" }));
+    await user.click(screen.getByRole("button", { name: /Editar contraoferta/ }));
+    for (const digit of ["2", "3", "7", "0", "0"]) {
+      await user.click(screen.getByRole("button", { name: digit }));
+    }
+    await user.click(screen.getByRole("button", { name: "Listo" }));
+    await user.click(screen.getByRole("button", { name: "Enviar contraoferta" }));
+
+    await waitFor(() => expect(mockSend).toHaveBeenCalledWith("r1", { kind: "counter", priceCop: 23700, etaMin: 11 }));
+  });
+
   it("stops the counter at twice the fare", async () => {
     mockOpen.mockResolvedValue([card({ fareCop: 8000 })]);
     const user = await renderScreen();

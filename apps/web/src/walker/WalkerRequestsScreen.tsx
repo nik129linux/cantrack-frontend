@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ClockIcon, PinIcon } from "../auth/icons.js";
-import { MinusIcon, PlusIcon } from "../home/icons.js";
+import { MinusIcon, PencilIcon, PlusIcon } from "../home/icons.js";
+import { PriceKeypad } from "../ui/PriceKeypad.js";
 import { ApiError } from "../lib/apiError.js";
 import { formatCop, formatWhenBogota } from "../lib/format.js";
 import {
@@ -113,6 +114,7 @@ function InboxCard({ card, onChanged, onDrop, onGoHome }: CardProps) {
   const [needsOnline, setNeedsOnline] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [isKeypadOpen, setIsKeypadOpen] = useState(false);
   const { position } = useWalkerPresence();
   const seconds = useSecondsLeft(card.deadlineAt);
   const eta = etaMinutes(card.distanceKm);
@@ -250,7 +252,17 @@ function InboxCard({ card, onChanged, onDrop, onGoHome }: CardProps) {
             >
               <MinusIcon />
             </button>
-            <span className="wreq__counter-value" aria-live="polite">{formatCop(counter)}</span>
+            <span className="wreq__counter-value" aria-live="polite">
+              <button
+                type="button"
+                className="wreq__counter-edit"
+                aria-label={`Editar contraoferta, ${formatCop(counter)}`}
+                onClick={() => setIsKeypadOpen(true)}
+              >
+                {formatCop(counter)}
+                <PencilIcon />
+              </button>
+            </span>
             <button
               type="button"
               className="wg__round"
@@ -261,6 +273,18 @@ function InboxCard({ card, onChanged, onDrop, onGoHome }: CardProps) {
               <PlusIcon />
             </button>
           </div>
+          <PriceKeypad
+            open={isKeypadOpen}
+            title="Tu contraoferta"
+            value={counter}
+            min={minCounter}
+            max={maxCounter}
+            onConfirm={(next) => {
+              setCounter(next);
+              setIsKeypadOpen(false);
+            }}
+            onClose={() => setIsKeypadOpen(false)}
+          />
           <div className="wg__filters" role="group" aria-label="Subidas rápidas">
             {QUICK_RAISES.filter((raise) => card.fareCop + raise <= maxCounter).map((raise) => (
               <button

@@ -284,3 +284,36 @@
     animation: none;
   }
 }
+
+/* The counter is a button: tap it (or the pencil) to type the price on the number pad. */
+.wreq__counter-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: inherit;
+  cursor: pointer;
+  transition: background-color 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.wreq__counter-edit svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+.wreq__counter-edit:hover {
+  background: rgb(255 255 255 / 12%);
+}
+
+.wreq__counter-edit:focus-visible {
+  outline: 3px solid var(--lime-text, #cdf07a);
+  outline-offset: 2px;
+}

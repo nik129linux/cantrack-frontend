@@ -752,3 +752,35 @@
   border-color: var(--lime-text, #c9f07a);
   background: rgb(166 212 74 / 22%);
 }
+
+/* The fare is a button: tap it (or the pencil) to type the price on the number pad. */
+.oglass .explore__fare-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--tap-target, 44px);
+  padding: 0 6px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 200ms var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+}
+
+.oglass .explore__fare-edit svg {
+  width: 18px;
+  height: 18px;
+  opacity: 0.7;
+}
+
+.oglass .explore__fare-edit:hover {
+  background: rgb(255 255 255 / 12%);
+}
+
+.oglass .explore__fare-edit:focus-visible {
+  outline: 3px solid var(--lime-text);
+  outline-offset: 2px;
+}

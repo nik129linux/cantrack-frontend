@@ -105,6 +105,22 @@ export function MinusIcon() {
   );
 }
 
+export function PencilIcon() {
+  return (
+    <Line>
+      <path d="M4 20h4L19 9a2.100 2.100 0 0 0-4-4L4 16v4ZM13.500 6.500l4 4" />
+    </Line>
+  );
+}
+
+export function BackspaceIcon() {
+  return (
+    <Line>
+      <path d="M9 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6-7 6-7ZM13 10l4 4M17 10l-4 4" />
+    </Line>
+  );
+}
+
 export function CheckIcon() {
   return (
     <Line>
