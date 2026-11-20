@@ -204,3 +204,63 @@ describe("Fotos de reconocimiento", () => {
     expect(api.suggestDogTraits).not.toHaveBeenCalled();
   });
 });
+
+describe("Datos: sugerir la raza con una foto", () => {
+  async function openData() {
+    const user = userEvent.setup();
+    render(<OwnerDogsScreen />);
+    await user.click(await screen.findByRole("button", { name: /Luna/ }));
+    return user;
+  }
+  const photo = () => new File(["image"], "luna.png", { type: "image/png" });
+
+  it("opens the file picker from the button", async () => {
+    const user = await openData();
+    const input = screen.getByLabelText("Foto para sugerir la raza");
+    const click = vi.spyOn(input, "click");
+    await user.click(screen.getByRole("button", { name: "Sugerir con una foto" }));
+    expect(click).toHaveBeenCalledOnce();
+    expect(api.suggestDogTraits).not.toHaveBeenCalled();
+  });
+
+  it("suggests from one resized photo without enrolling, and shows the note in Datos", async () => {
+    const user = await openData();
+    const file = photo();
+    await user.upload(screen.getByLabelText("Foto para sugerir la raza"), file);
+    const suggestion = await screen.findByRole("complementary", { name: "Sugerencia de la IA" });
+    expect(resizeImage).toHaveBeenCalledExactlyOnceWith(file);
+    expect(api.suggestDogTraits).toHaveBeenCalledExactlyOnceWith("dog-1", file);
+    expect(api.enrollPhotos).not.toHaveBeenCalled();
+    expect(suggestion.closest("details")).toBe(screen.getByLabelText("Raza").closest("details"));
+    await user.click(within(suggestion).getByRole("button", { name: "Usar" }));
+    await waitFor(() =>
+      expect(api.updateDog).toHaveBeenCalledExactlyOnceWith("dog-1", { breed: "Golden Retriever" }),
+    );
+    expect(screen.getByLabelText("Raza")).toHaveValue("Golden Retriever");
+    expect(await screen.findByRole("radio", { name: "Grande" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+  });
+
+  it("says so when the photo gives no breed or size", async () => {
+    api.suggestDogTraits.mockResolvedValue({ breed: null, size: null });
+    const user = await openData();
+    await user.upload(screen.getByLabelText("Foto para sugerir la raza"), photo());
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "La IA no pudo reconocer la raza en esa foto. Prueba con otra.",
+    );
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sugerir con una foto" })).toBeEnabled();
+  });
+
+  it.each([
+    [new ApiError("Too many suggestions. Try again later.", 429), "Ya pediste varias sugerencias. Intenta de nuevo en una hora."],
+    [new ApiError("Dog not found.", 404), "No encontramos a ese perro."],
+    [new Error("boom"), "No pudimos sugerir la raza."],
+  ])("shows %s as an error", async (error, text) => {
+    api.suggestDogTraits.mockRejectedValue(error);
+    const user = await openData();
+    await user.upload(screen.getByLabelText("Foto para sugerir la raza"), photo());
+    expect(await screen.findByRole("alert")).toHaveTextContent(text);
+    expect(api.updateDog).not.toHaveBeenCalled();
+  });
+});
