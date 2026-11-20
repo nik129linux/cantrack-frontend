@@ -14,6 +14,7 @@ import {
   type DogTraits,
   type TimelineItem,
 } from "../lib/api.js";
+import { ApiError } from "../lib/apiError.js";
 import { translateApiError } from "../lib/errors.js";
 import { formatWhenBogota } from "../lib/format.js";
 import { resizeImage } from "../lib/image.js";
@@ -266,12 +267,15 @@ function DogFicha({
   const [feedback, setFeedback] = useState<Record<string, Feedback>>({});
   const [photos, setPhotos] = useState<File[]>([]);
   const [suggestion, setSuggestion] = useState<DogTraits | null>(null);
+  // Which section asked for the suggestion, so the note shows up right there.
+  const [suggestionFrom, setSuggestionFrom] = useState<"data" | "photos">("photos");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [timeline, setTimeline] = useState<TimelineItem[] | null>(null);
   const [timelineBusy, setTimelineBusy] = useState(false);
   const [timelineAttempt, setTimelineAttempt] = useState(0);
   const [stored, setStored] = useState<string[] | null>(null);
   const photoInput = useRef<HTMLInputElement>(null);
+  const suggestInput = useRef<HTMLInputElement>(null);
   const suggestionVersion = useRef(0);
 
   // The photos already enrolled, so the owner sees what the walker matches against.
@@ -386,10 +390,45 @@ function DogFicha({
     try {
       const traits = await suggestDogTraits(dog.id, await resizeImage(firstPhoto));
       if (version === suggestionVersion.current && (traits.breed || traits.size)) {
+        setSuggestionFrom("photos");
         setSuggestion(traits);
       }
     } catch {
       /* Suggestions are optional; enrollment has already succeeded. */
+    }
+  }
+  /** On demand from the Datos form: one photo, nothing stored, no re-enrolment. */
+  async function suggestFromPhoto(file: File) {
+    setBusy("suggest");
+    tell("data", null);
+    setSuggestion(null);
+    const version = ++suggestionVersion.current;
+    try {
+      const traits = await suggestDogTraits(dog.id, await resizeImage(file));
+      if (version !== suggestionVersion.current) {
+        return;
+      }
+      if (traits.breed || traits.size) {
+        setSuggestionFrom("data");
+        setSuggestion(traits);
+      } else {
+        tell("data", { text: "La IA no pudo reconocer la raza en esa foto. Prueba con otra." });
+      }
+    } catch (error) {
+      if (version === suggestionVersion.current) {
+        tell("data", {
+          error: true,
+          text:
+            error instanceof ApiError && error.status === 429
+              ? "Ya pediste varias sugerencias. Intenta de nuevo en una hora."
+              : translateApiError(error, "No pudimos sugerir la raza."),
+        });
+      }
+    } finally {
+      setBusy(null);
+      if (suggestInput.current) {
+        suggestInput.current.value = "";
+      }
     }
   }
   async function savePhotos(event: FormEvent) {
@@ -462,6 +501,33 @@ function DogFicha({
     open: Boolean(open[key]),
     onToggle: (value: boolean) => toggle(key, value),
   });
+  const suggestionNote = suggestion ? (
+    <aside className="home__note dogs__suggestion" aria-label="Sugerencia de la IA">
+      <p>
+        La IA cree que es{" "}
+        <strong>{[suggestion.breed, sizeLabel(suggestion.size)].filter(Boolean).join(" · ")}</strong>
+      </p>
+      <div className="dogs__actions">
+        <button
+          type="button"
+          className="home__cta"
+          disabled={busy !== null}
+          onClick={() => void applySuggestion()}
+        >
+          Usar
+        </button>
+        <button
+          type="button"
+          className="dogs__button"
+          disabled={busy !== null}
+          onClick={() => setSuggestion(null)}
+        >
+          Descartar
+        </button>
+      </div>
+      <FeedbackLine value={feedback.suggestion ?? null} />
+    </aside>
+  ) : null;
   return (
     <section className="glass dogs__card dogs__ficha" aria-label={`Ficha de ${dog.name}`}>
       <button type="button" className="dogs__button dogs__back" onClick={onBack}>
@@ -499,6 +565,29 @@ function DogFicha({
               value={breed}
               onChange={(event) => setBreed(event.target.value)}
             />
+            <div className="dogs__actions">
+              <button
+                type="button"
+                className="dogs__button"
+                disabled={busy !== null}
+                onClick={() => suggestInput.current?.click()}
+              >
+                {busy === "suggest" ? "Mirando la foto…" : "Sugerir con una foto"}
+              </button>
+            </div>
+            <input
+              ref={suggestInput}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              hidden
+              aria-label="Foto para sugerir la raza"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                  void suggestFromPhoto(file);
+                }
+              }}
+            />
           </div>
           <div className="dogs__field">
             <label htmlFor="dog-notes">Indicaciones para el paseador</label>
@@ -521,6 +610,7 @@ function DogFicha({
           </button>
           <FeedbackLine value={feedback.data ?? null} />
         </form>
+        {suggestionFrom === "data" ? suggestionNote : null}
       </Section>
       <Section
         title="Carácter y salud"
@@ -643,33 +733,7 @@ function DogFicha({
           </button>
           <FeedbackLine value={feedback.photos ?? null} />
         </form>
-        {suggestion ? (
-          <aside className="home__note dogs__suggestion" aria-label="Sugerencia de la IA">
-            <p>
-              La IA cree que es{" "}
-              <strong>{[suggestion.breed, sizeLabel(suggestion.size)].filter(Boolean).join(" · ")}</strong>
-            </p>
-            <div className="dogs__actions">
-              <button
-                type="button"
-                className="home__cta"
-                disabled={busy !== null}
-                onClick={() => void applySuggestion()}
-              >
-                Usar
-              </button>
-              <button
-                type="button"
-                className="dogs__button"
-                disabled={busy !== null}
-                onClick={() => setSuggestion(null)}
-              >
-                Descartar
-              </button>
-            </div>
-            <FeedbackLine value={feedback.suggestion ?? null} />
-          </aside>
-        ) : null}
+        {suggestionFrom === "photos" ? suggestionNote : null}
       </Section>
       <Section title="Diario" summary="Últimos paseos" {...sectionProps("diary")}>
         {timelineBusy ? (
