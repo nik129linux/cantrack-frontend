@@ -309,3 +309,74 @@ describe("Owner Mis paseos", () => {
     expect(await screen.findByRole("button", { name: "Abrir paseo de Luna" })).toBeInTheDocument();
   });
 });
+
+describe("Owner photo checks (AI on the pickup and return photos)", () => {
+  beforeEach(() => {
+    cleanup();
+    for (const mock of [mockWalks, mockSummary, mockDetail, mockLive]) mock.mockReset();
+    mockWalks.mockResolvedValue({ items: [walk()], nextCursor: null });
+    mockSummary.mockResolvedValue(summary());
+  });
+
+  it("shows same dog and looks fine, and a concern as a warning with its note", async () => {
+    mockDetail.mockResolvedValue(
+      detail({
+        status: "done",
+        allowedActions: [],
+        photoChecks: {
+          checkIn: { match: "match", similarity: 0.93, condition: "ok", note: null },
+          checkOut: {
+            match: "match", similarity: 0.95, condition: "concern", note: "Llega mojado y con barro.",
+            sameAsCheckIn: { match: "match", similarity: 0.97 },
+          },
+        },
+      }),
+    );
+    const user = await renderScreen();
+    await openLuna(user);
+
+    const card = await screen.findByRole("region", { name: "Fotos del paseo" });
+    expect(within(card).getByText("Es Luna ✓")).toBeInTheDocument();
+    expect(within(card).getByText("El mismo perro que recogió ✓")).toBeInTheDocument();
+    expect(within(card).getByText("Se ve bien ✓")).toBeInTheDocument();
+    expect(within(card).getByRole("alert")).toHaveTextContent("Ojo: Llega mojado y con barro.");
+    // Raw cosine scores never reach the owner.
+    expect(within(card).queryByText(/0\.9|%/)).not.toBeInTheDocument();
+  });
+
+  it("warns when the dog handed back could not be confirmed as the one picked up", async () => {
+    mockDetail.mockResolvedValue(
+      detail({
+        status: "done",
+        allowedActions: [],
+        photoChecks: {
+          checkIn: null,
+          checkOut: { match: "uncertain", similarity: 0.6, condition: "ok", note: null, sameAsCheckIn: { match: "uncertain", similarity: 0.6 } },
+        },
+      }),
+    );
+    const user = await renderScreen();
+    await openLuna(user);
+    const card = await screen.findByRole("region", { name: "Fotos del paseo" });
+    expect(within(card).getByRole("alert")).toHaveTextContent("No pudimos confirmar que sea el mismo perro que recogió.");
+    expect(within(card).queryByText("Al recogerlo")).not.toBeInTheDocument();
+  });
+
+  it("is hidden without photos or when the AI gave nothing usable", async () => {
+    mockDetail.mockResolvedValue(
+      detail({
+        status: "done",
+        allowedActions: [],
+        photoChecks: {
+          checkIn: null,
+          checkOut: { match: "unavailable", similarity: null, condition: "unavailable", note: null, sameAsCheckIn: { match: "unavailable", similarity: null } },
+        },
+      }),
+    );
+    const user = await renderScreen();
+    await openLuna(user);
+    await screen.findByRole("region", { name: "Paseo" });
+    expect(screen.queryByRole("region", { name: "Fotos del paseo" })).not.toBeInTheDocument();
+  });
+});
+

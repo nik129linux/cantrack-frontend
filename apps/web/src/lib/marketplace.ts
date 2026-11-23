@@ -431,6 +431,8 @@ export type WalkDetail = {
     durationMin: number;
   };
   allowedActions: WalkAction[];
+  /** The AI's read of the pickup and return photos; null when there was none. */
+  photoChecks?: { checkIn: CheckInAi | null; checkOut: CheckOutAi | null };
 };
 
 export function fetchWalkDetail(requestId: string): Promise<WalkDetail> {
@@ -849,9 +851,20 @@ export function fetchApproach(requestId: string): Promise<Approach> {
 export type CheckInAi = {
   match: "match" | "uncertain" | "unknown" | "unavailable";
   similarity: number | null;
+  /** How the dog looks in the photo (vision model). Older answers may lack it. */
+  condition?: PhotoCondition;
+  /** One short sentence in Spanish when `condition` is "concern". */
+  note?: string | null;
 };
 
-export type WalkTransition = { id: string; status: string; walkerId: string | null; ai?: CheckInAi };
+export type PhotoCondition = "ok" | "concern" | "no_dog" | "unavailable";
+
+/** The return photo's read: the check-in fields plus "is it the dog picked up". */
+export type CheckOutAi = CheckInAi & {
+  sameAsCheckIn: { match: CheckInAi["match"]; similarity: number | null };
+};
+
+export type WalkTransition = { id: string; status: string; walkerId: string | null; ai?: CheckInAi | CheckOutAi };
 
 /**
  * Start a won walk (assigned → in_walk). With a photo of the dog, the answer
@@ -867,9 +880,14 @@ export function checkInWalk(requestId: string, photo?: Blob): Promise<WalkTransi
   return request(path, { method: "POST", body, mascot: false });
 }
 
-/** Finish the walk in progress (in_walk → done). */
-export function checkOutWalk(requestId: string): Promise<WalkTransition> {
-  return request(`/bidding/requests/${enc(requestId)}/check-out`, { method: "POST" });
+/**
+ * Finish the walk in progress (in_walk → done). The photo of the dog at return is
+ * required; the answer carries what the AI read in it (advice only).
+ */
+export function checkOutWalk(requestId: string, photo: Blob): Promise<WalkTransition & { ai?: CheckOutAi }> {
+  const body = new FormData();
+  body.append("image", photo, "dog.jpg");
+  return request(`/bidding/requests/${enc(requestId)}/check-out`, { method: "POST", body, mascot: false });
 }
 
 /** Give back an assigned walk: it reopens for bidding and costs one cancellation. */

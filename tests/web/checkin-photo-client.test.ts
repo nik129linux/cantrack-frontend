@@ -53,3 +53,29 @@ describe("checkInWalk", () => {
     expect(new Headers(init.headers).get("Content-Type")).toBeNull();
   });
 });
+
+describe("checkOutWalk", () => {
+  beforeEach(() => {
+    mockFetch.mockReset();
+    vi.stubGlobal("fetch", mockFetch);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("always sends the return photo as the multipart field image and returns ai", async () => {
+    const answer = {
+      id: "b2", status: "done", walkerId: "w1",
+      ai: { match: "match", similarity: 0.95, sameAsCheckIn: { match: "match", similarity: 0.97 }, condition: "ok", note: null },
+    };
+    mockFetch.mockResolvedValueOnce(jsonResponse(answer));
+    const { checkOutWalk } = await import("../../apps/web/src/lib/marketplace.js");
+    await expect(checkOutWalk("b2", new Blob(["jpg"], { type: "image/jpeg" }))).resolves.toEqual(answer);
+    const { url, init } = lastCall();
+    expect(url).toContain("/bidding/requests/b2/check-out");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBeInstanceOf(FormData);
+    expect((init.body as FormData).get("image")).toBeInstanceOf(Blob);
+    expect(new Headers(init.headers).get("Content-Type")).toBeNull();
+  });
+});

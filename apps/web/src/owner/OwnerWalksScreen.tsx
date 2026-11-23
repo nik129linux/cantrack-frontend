@@ -461,6 +461,8 @@ function WalkDetailView({ walkId, onBack, onRepeated, onChanged }: DetailProps) 
         </section>
       ) : null}
 
+      <PhotoChecksCard checks={detail.photoChecks} dog={detail.dog?.name ?? "tu perro"} />
+
       {report !== null ? (
         <section className="glass owalks__card" aria-label="Reporte">
           <h2 className="owalks__card-title">📸 Reporte del paseo</h2>
@@ -839,5 +841,57 @@ export function OwnerWalksScreen({ userId, onRepeated = () => undefined, onGo }:
         </button>
       ) : null}
     </div>
+  );
+}
+
+type PhotoChecks = NonNullable<WalkDetail["photoChecks"]>;
+
+/** One photo's read in plain words; null when the AI gave nothing usable. */
+function photoLines(ai: PhotoChecks["checkIn"] | PhotoChecks["checkOut"], dog: string, end: "start" | "finish") {
+  if (ai === null) return null;
+  const good: string[] = [];
+  const warn: string[] = [];
+  const same = "sameAsCheckIn" in ai ? ai.sameAsCheckIn.match : null;
+  if (end === "start" && ai.match === "match") good.push(`Es ${dog}`);
+  if (end === "start" && ai.match === "uncertain") warn.push(`No pudimos confirmar que fuera ${dog}; el paseador lo revisó a ojo.`);
+  if (end === "finish" && same === "match") good.push("El mismo perro que recogió");
+  if (end === "finish" && same === "uncertain") warn.push("No pudimos confirmar que sea el mismo perro que recogió.");
+  if (ai.condition === "ok") good.push("Se ve bien");
+  if (ai.condition === "concern") warn.push(`Ojo: ${ai.note ?? `revisa cómo está ${dog}.`}`);
+  if (ai.condition === "no_dog") warn.push("No se ve un perro en la foto.");
+  return good.length === 0 && warn.length === 0 ? null : { good, warn };
+}
+
+/**
+ * What the AI read in the pickup and return photos: is it the same dog, and does
+ * it look fine. Advice only; hidden when the walker took no photo.
+ */
+function PhotoChecksCard({ checks, dog }: { checks: WalkDetail["photoChecks"]; dog: string }) {
+  if (checks === undefined) return null;
+  const rows = [
+    { label: "Al recogerlo", read: photoLines(checks.checkIn, dog, "start") },
+    { label: "Al entregarlo", read: photoLines(checks.checkOut, dog, "finish") },
+  ].filter((row) => row.read !== null);
+  if (rows.length === 0) return null;
+  return (
+    <section className="glass owalks__card" aria-label="Fotos del paseo">
+      <h2 className="owalks__card-title">Fotos del paseo</h2>
+      {rows.map(({ label, read }) => (
+        <div key={label}>
+          <p className="owalks__muted">{label}</p>
+          {read!.good.length > 0 ? (
+            <p>
+              {read!.good.map((text) => (
+                <span key={text} className="owalks__tag owalks__tag--lime">{text} ✓</span>
+              ))}
+            </p>
+          ) : null}
+          {read!.warn.map((text) => (
+            <p key={text} className="owalks__note" role="alert">{text}</p>
+          ))}
+        </div>
+      ))}
+      <p className="owalks__muted">Lo revisa la IA a partir de las fotos del paseador. Es una ayuda, no un diagnóstico.</p>
+    </section>
   );
 }
