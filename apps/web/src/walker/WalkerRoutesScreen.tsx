@@ -11,6 +11,7 @@ import {
   walkerCancelWalk,
   type ActiveWalk,
   type CheckInAi,
+  type CheckOutAi,
   type DayPath,
   type DayRoute,
   type DayRouteStop,
@@ -231,27 +232,61 @@ function StartWalkSheet({
   );
 }
 
-/** What the AI said about the check-in photo. Advice only; `unavailable` shows nothing. */
-function CheckInVerdict({ match, dog, onDismiss }: { match: CheckInAi["match"]; dog: string; onDismiss: () => void }) {
-  if (match === "match") {
-    return (
-      <ul className="wg__chips" role="status">
-        <li className="wg__chip" data-tone="lime">Es {dog} ✓</li>
-      </ul>
-    );
-  }
-  if (match === "uncertain") {
-    return (
-      <div className="wg__warn wroute__notice wroute__notice--info" role="alert">
-        <span>No estamos seguros de que sea {dog}. Confírmalo a ojo.</span>
-        <button type="button" className="wg__primary" onClick={onDismiss}>Sí, es {dog}</button>
-      </div>
-    );
-  }
-  if (match === "unknown") {
-    return <p className="wg__muted" role="status">{dog} no tiene fotos de referencia todavía.</p>;
-  }
-  return null;
+/** What the AI read in a walk photo, and at which end of the walk. */
+type Verdict = { ai: CheckInAi | CheckOutAi; dog: string; end: "start" | "finish" };
+
+/**
+ * What the AI said about the check-in or return photo. Advice only: `unavailable`
+ * shows nothing, a doubt asks the walker to look, and a concern is never hidden.
+ */
+function PhotoVerdict({ verdict, onDismiss }: { verdict: Verdict; onDismiss: () => void }) {
+  const { ai, dog, end } = verdict;
+  const same = "sameAsCheckIn" in ai ? ai.sameAsCheckIn.match : null;
+  const chips: string[] = [];
+  if (end === "start" && ai.match === "match") chips.push(`Es ${dog} ✓`);
+  if (end === "finish" && same === "match") chips.push("Es el mismo perro que recogiste ✓");
+  if (ai.condition === "ok") chips.push("Se ve bien ✓");
+  const doubt =
+    end === "start"
+      ? ai.match === "uncertain" ? `No estamos seguros de que sea ${dog}. Confírmalo a ojo.` : null
+      : same === "uncertain" ? `No pudimos confirmar que sea el mismo perro que recogiste. Revisa que sea ${dog}.` : null;
+  return (
+    <>
+      {chips.length > 0 ? (
+        <ul className="wg__chips" role="status">
+          {chips.map((chip) => (
+            <li key={chip} className="wg__chip" data-tone="lime">{chip}</li>
+          ))}
+        </ul>
+      ) : null}
+      {ai.condition === "concern" ? (
+        <div className="wg__warn wroute__notice wroute__notice--info" role="alert">
+          <span>
+            Ojo: {ai.note ?? `revisa cómo está ${dog}.`} {end === "start" ? "Avísale al dueño antes de salir." : "El dueño lo verá en su reporte."}
+          </span>
+          {doubt === null ? <button type="button" className="wg__ghost" onClick={onDismiss}>Entendido</button> : null}
+        </div>
+      ) : null}
+      {ai.condition === "no_dog" ? <p className="wg__muted" role="status">No vimos un perro en la foto.</p> : null}
+      {doubt !== null ? (
+        <div className="wg__warn wroute__notice wroute__notice--info" role="alert">
+          <span>{doubt}</span>
+          <button type="button" className="wg__primary" onClick={onDismiss}>Sí, es {dog}</button>
+        </div>
+      ) : null}
+      {end === "start" && ai.match === "unknown" ? (
+        <p className="wg__muted" role="status">{dog} no tiene fotos de referencia todavía.</p>
+      ) : null}
+    </>
+  );
+}
+
+/** A doubt about the dog or a concern stays until the walker answers or reads it. */
+function hasOpenQuestion(verdict: Verdict): boolean {
+  const { ai, end } = verdict;
+  if (ai.condition === "concern") return true;
+  if (end === "start") return ai.match === "uncertain";
+  return "sameAsCheckIn" in ai && ai.sameAsCheckIn.match === "uncertain";
 }
 
 function CallLink({ name, phone }: { name: string | null | undefined; phone: string | null | undefined }) {
@@ -273,12 +308,13 @@ function ActiveCard({
   walk: ActiveWalk;
   busy: boolean;
   demo: boolean;
-  onFinish: () => void;
+  onFinish: (photo: File) => void;
   onEnded: () => void;
 }) {
   const now = useNow(true);
   const gps = useGpsStream(walk.requestId, onEnded, demo);
   const [asking, setAsking] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
   const started = Date.parse(walk.startedAt ?? walk.requestedTime);
   const elapsed = Number.isNaN(started) ? 0 : (now - started) / 1000;
   const goal = Math.max(1, walk.durationHours * 3600);
@@ -325,14 +361,32 @@ function ActiveCard({
         </div>
       </div>
       {asking ? (
-        <Confirm
-          question={`¿Terminar el paseo de ${dog}?`}
-          yes="Sí, terminar"
-          no="Seguir paseando"
-          busy={busy}
-          onYes={onFinish}
-          onNo={() => setAsking(false)}
-        />
+        <div className="wroute__confirm" role="group" aria-label={`¿Terminar el paseo de ${dog}?`}>
+          <p>¿Terminar el paseo de {dog}?</p>
+          <p className="wg__muted">Toma una foto de {dog} al entregarlo. Revisamos que sea el mismo perro y que esté bien.</p>
+          {busy ? <DogLoader label="Revisando la foto…" /> : null}
+          <div className="wroute__row">
+            <label className="wg__ghost wroute__link" aria-disabled={busy || undefined}>
+              {photo !== null ? "Cambiar foto" : "Tomar foto"}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                hidden
+                disabled={busy}
+                aria-label={`Foto de ${dog} al entregarlo`}
+                onChange={(event) => setPhoto(event.target.files?.[0] ?? null)}
+              />
+            </label>
+            {photo !== null ? <span className="wg__chip" data-tone="lime">Foto lista</span> : null}
+          </div>
+          <div className="wroute__row">
+            <button type="button" className="wg__danger" disabled={busy || photo === null} onClick={() => photo !== null && onFinish(photo)}>
+              Sí, terminar
+            </button>
+            <button type="button" className="wg__ghost" disabled={busy} onClick={() => setAsking(false)}>Seguir paseando</button>
+          </div>
+        </div>
       ) : (
         <button type="button" className="wg__primary" disabled={busy} onClick={() => setAsking(true)}>
           Terminar paseo
@@ -620,7 +674,7 @@ export function WalkerRoutesScreen({ userId, onGoHome = () => undefined, onGoReq
   const [notice, setNotice] = useState<Notice | null>(null);
   // The walk whose start sheet is open, and what the AI said about the last check-in photo.
   const [starting, setStarting] = useState<{ requestId: string; dog: string } | null>(null);
-  const [verdict, setVerdict] = useState<{ match: CheckInAi["match"]; dog: string } | null>(null);
+  const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [focus, setFocus] = useState<{ lat: number; lng: number; key: number } | null>(null);
   const [navId, setNavId] = useState<string | null>(null);
   // The day as one line along the streets, kept with the day it was asked for.
@@ -759,7 +813,24 @@ export function WalkerRoutesScreen({ userId, onGoHome = () => undefined, onGoReq
     );
     if (started) {
       setStarting(null);
-      setVerdict(ai !== undefined && ai.match !== "unavailable" ? { match: ai.match, dog } : null);
+      setVerdict(ai !== undefined ? { ai, dog, end: "start" } : null);
+    }
+  };
+
+  // "Terminar paseo" needs the return photo; the AI's read of it shows as a verdict.
+  const confirmFinish = async (requestId: string, dog: string, netCop: number, photo: File) => {
+    let ai: CheckOutAi | undefined;
+    setVerdict(null);
+    const finished = await run(
+      requestId,
+      "check_out",
+      async () => {
+        ai = (await checkOutWalk(requestId, await resizeImage(photo))).ai;
+      },
+      { kind: "done", text: `Paseo terminado · +${formatCop(netCop)} netos` },
+    );
+    if (finished && ai !== undefined) {
+      setVerdict({ ai, dog, end: "finish" });
     }
   };
 
@@ -823,7 +894,7 @@ export function WalkerRoutesScreen({ userId, onGoHome = () => undefined, onGoReq
         <button type="button" className="wg__round" aria-label="Día siguiente" onClick={() => setDate(shiftDay(date, 1))}>›</button>
       </div>
 
-      {verdict !== null ? <CheckInVerdict match={verdict.match} dog={verdict.dog} onDismiss={() => setVerdict(null)} /> : null}
+      {verdict !== null ? <PhotoVerdict verdict={verdict} onDismiss={() => setVerdict(null)} /> : null}
       {notice !== null ? (
         <div className={notice.kind === "done" ? "wg__ok wroute__notice" : "wg__ok wroute__notice wroute__notice--info"} role="status">
           {notice.kind === "done" ? <MascotSprite pose="jump" size={72} /> : null}
@@ -834,7 +905,7 @@ export function WalkerRoutesScreen({ userId, onGoHome = () => undefined, onGoReq
             onClick={() => {
               setNotice(null);
               // A doubt about the dog stays until the walker answers it.
-              setVerdict((current) => (current?.match === "uncertain" ? current : null));
+              setVerdict((current) => (current !== null && hasOpenQuestion(current) ? current : null));
             }}
           >
             Listo
@@ -858,12 +929,7 @@ export function WalkerRoutesScreen({ userId, onGoHome = () => undefined, onGoReq
           busy={busyId === active.requestId}
           demo={preview}
           onEnded={() => void load()}
-          onFinish={() =>
-            void run(active.requestId, "check_out", () => checkOutWalk(active.requestId), {
-              kind: "done",
-              text: `Paseo terminado · +${formatCop(active.netCop)} netos`,
-            })
-          }
+          onFinish={(photo) => void confirmFinish(active.requestId, active.dogName ?? "tu perro", active.netCop, photo)}
         />
       ) : null}
 

@@ -7,6 +7,9 @@ import userEvent from "@testing-library/user-event";
 // walker-perfil.md): everything is drawn from the server's answer.
 
 vi.mock("../../apps/web/src/lib/supabase.js", () => ({ supabase: { auth: {} } }));
+// Check-out needs the return photo; resizing is a canvas job jsdom cannot do.
+const RESIZED = new Blob(["small"], { type: "image/jpeg" });
+vi.mock("../../apps/web/src/lib/image.js", () => ({ resizeImage: vi.fn().mockResolvedValue(RESIZED) }));
 vi.mock("../../apps/web/src/map/MarkersMap.js", () => ({
   MarkersMap: ({ label, markers, path }: { label: string; markers: { label: string }[]; path?: unknown[] | null }) => (
     <div
@@ -190,8 +193,10 @@ describe("Walker Rutas", () => {
     expect(within(card).getByRole("timer")).toHaveAccessibleName("Llevas 18:00 de 45 minutos");
     await user.click(within(card).getByRole("button", { name: "Terminar paseo" }));
     expect(mockCheckOut).not.toHaveBeenCalled();
+    expect(within(card).getByRole("button", { name: "Sí, terminar" })).toBeDisabled();
+    await user.upload(within(card).getByLabelText("Foto de Max al entregarlo"), new File(["raw"], "max.jpg", { type: "image/jpeg" }));
     await user.click(within(card).getByRole("button", { name: "Sí, terminar" }));
-    await waitFor(() => expect(mockCheckOut).toHaveBeenCalledWith("b2"));
+    await waitFor(() => expect(mockCheckOut).toHaveBeenCalledWith("b2", RESIZED));
     expect(await screen.findByText("Paseo terminado · +$15.300 netos")).toBeInTheDocument();
     vi.useRealTimers();
   });
@@ -355,6 +360,7 @@ describe("Walker Rutas", () => {
     await user.click(await screen.findByRole("button", { name: "Iniciar sin foto" }));
     const active = await screen.findByRole("region", { name: "Paseo en curso con Max" });
     await user.click(within(active).getByRole("button", { name: "Terminar paseo" }));
+    await user.upload(within(active).getByLabelText("Foto de Max al entregarlo"), new File(["raw"], "max.jpg", { type: "image/jpeg" }));
     await user.click(within(active).getByRole("button", { name: "Sí, terminar" }));
     expect(await screen.findByText("Paseo terminado · +$16.200 netos")).toBeInTheDocument();
     expect(within(await screen.findByRole("region", { name: "Siguiente parada" })).getByText("Kira")).toBeInTheDocument();
