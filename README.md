@@ -39,7 +39,6 @@ https://d2p0dna7twnh6n.cloudfront.net; Android's domain association is in
 
 | Component | Repository |
 |---|---|
-| Complete source | https://github.com/nik129linux/cantrack |
 | Frontend | https://github.com/nik129linux/cantrack-frontend |
 | Backend | https://github.com/nik129linux/cantrack-backend |
 | Database | https://github.com/nik129linux/cantrack-db |
