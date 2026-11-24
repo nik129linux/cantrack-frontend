@@ -4,7 +4,6 @@
 - Strict TypeScript check: passed with `npm run typecheck`.
 - Vite production build and PWA service-worker generation: passed.
 - Mobile browser review: owner and walker home previews at 390 × 844.
-- The full monorepo frontend was checked independently: the same 524 tests, typecheck and build passed.
 - Fixed the route-screen render union that previously failed the strict typecheck.
 
 Existing limitation: the build warns about a JavaScript chunk larger than 500 kB.
