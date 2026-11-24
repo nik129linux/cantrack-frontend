@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { ConnectionNotice } from "../ui/ConnectionNotice.js";
 import {
   CompassIcon,
   HomeIcon,
@@ -110,6 +111,10 @@ export function HomeShell({ role, screens = {}, onLogout, userId = "", preview =
 
   const entry = screens[active];
   const screen = typeof entry === "function" ? entry(go) : entry;
+  // Keep the route mounted so an active walk keeps sharing GPS across tabs.
+  const keepRoutes = role === "walker" && userId !== "" && !preview && screens.routes !== undefined;
+  const routeEntry = screens.routes;
+  const routeScreen = keepRoutes ? (typeof routeEntry === "function" ? routeEntry(go) : routeEntry) : null;
 
   const shell = (
     <div className="auth-scene home" ref={sceneRef}>
@@ -148,7 +153,7 @@ export function HomeShell({ role, screens = {}, onLogout, userId = "", preview =
         </div>
       </nav>
 
-      {onLogout !== undefined ? (
+      {onLogout !== undefined && active === "profile" && screen === undefined ? (
         <button type="button" className="glass home__logout" onClick={onLogout}>
           Salir
         </button>
@@ -156,7 +161,8 @@ export function HomeShell({ role, screens = {}, onLogout, userId = "", preview =
 
       {/* Keyed by tab: each switch mounts a fresh view that fades in. */}
       <div key={active} className="home__view">
-        {screen !== undefined ? (
+        <ConnectionNotice />
+        {keepRoutes && active === "routes" ? null : screen !== undefined ? (
           <main className="home__grid home__grid--screen">
             <div className="home__screen">{screen}</div>
           </main>
@@ -171,6 +177,11 @@ export function HomeShell({ role, screens = {}, onLogout, userId = "", preview =
           <WalkerHome userId={userId} preview={preview} onNavigate={go} />
         )}
       </div>
+      {keepRoutes ? (
+        <div className="home__view" style={active === "routes" ? undefined : { display: "none" }} aria-hidden={active !== "routes"}>
+          <main className="home__grid home__grid--screen"><div className="home__screen">{routeScreen}</div></main>
+        </div>
+      ) : null}
     </div>
   );
 

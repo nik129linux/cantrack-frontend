@@ -238,11 +238,15 @@ describe("Owner Perfil", () => {
     expect(await screen.findByText("La contraseña actual no es correcta.")).toBeInTheDocument();
   });
 
-  it("signs out of this device or of every device", async () => {
+  it("places local sign out below the mode switch and keeps global sign out in privacy", async () => {
     const { user, onSignOut } = await renderScreen();
-    await user.click(screen.getByRole("button", { name: "Cerrar sesión" }));
+    const modeSwitch = screen.getByRole("button", { name: "Modo paseador" });
+    const exit = screen.getByRole("button", { name: "Salir", exact: true });
+    expect(modeSwitch.parentElement).toContainElement(exit);
+    await user.click(exit);
     expect(onSignOut).toHaveBeenLastCalledWith();
 
+    await user.click(screen.getByText("Privacidad y cuenta"));
     await user.click(screen.getByRole("button", { name: "Cerrar sesión en todos los dispositivos" }));
     expect(onSignOut).toHaveBeenLastCalledWith("global");
   });

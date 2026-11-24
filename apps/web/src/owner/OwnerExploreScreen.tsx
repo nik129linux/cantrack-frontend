@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { fetchDogs, type Dog } from "../lib/api.js";
 import { ApiError } from "../lib/apiError.js";
+import { useDraftState, clearSessionDrafts, hasSessionDraft } from "../lib/useDraftState.js";
 import { formatCop, formatWhenBogota } from "../lib/format.js";
 import { readSavedHome } from "../lib/homePoint.js";
 import { experienceLabel, sizesLabel, walksLabel } from "../lib/walkerCard.js";
@@ -222,6 +223,7 @@ function OffersPanel({ request, favorites, onPicked, onRaised, onCancelled, onCl
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [viewing, setViewing] = useState<Offer | null>(null);
   const etag = useRef<string | null>(null);
+  const actionLock = useRef(false);
   const panelRef = useRef<HTMLElement>(null);
   const now = useNow(1000);
 
@@ -260,6 +262,8 @@ function OffersPanel({ request, favorites, onPicked, onRaised, onCancelled, onCl
   }, [poll]);
 
   async function pick(offer: Offer) {
+    if (actionLock.current) return;
+    actionLock.current = true;
     setIsBusy(true);
     setActionError(null);
     try {
@@ -274,11 +278,14 @@ function OffersPanel({ request, favorites, onPicked, onRaised, onCancelled, onCl
         setActionError(exploreError(failure, "No pudimos elegir esa oferta."));
       }
     } finally {
+      actionLock.current = false;
       setIsBusy(false);
     }
   }
 
   async function raise() {
+    if (actionLock.current) return;
+    actionLock.current = true;
     setIsBusy(true);
     setActionError(null);
     try {
@@ -287,11 +294,14 @@ function OffersPanel({ request, favorites, onPicked, onRaised, onCancelled, onCl
     } catch (failure: unknown) {
       setActionError(exploreError(failure, "No pudimos subir tu oferta."));
     } finally {
+      actionLock.current = false;
       setIsBusy(false);
     }
   }
 
   async function cancel() {
+    if (actionLock.current) return;
+    actionLock.current = true;
     setIsBusy(true);
     setActionError(null);
     try {
@@ -300,6 +310,8 @@ function OffersPanel({ request, favorites, onPicked, onRaised, onCancelled, onCl
     } catch (failure: unknown) {
       setActionError(exploreError(failure, "No pudimos cancelar la solicitud."));
       setIsBusy(false);
+    } finally {
+      actionLock.current = false;
     }
   }
 
@@ -460,17 +472,18 @@ export function OwnerExploreScreen({ userId, onPicked = () => undefined, onGo }:
   const [dogs, setDogs] = useState<Dog[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [dogId, setDogId] = useState("");
-  const [minutes, setMinutes] = useState<number>(45);
-  const [when, setWhen] = useState("");
-  const [fare, setFare] = useState(15000);
+  const [dogId, setDogId] = useDraftState(`request:${userId}:dog`, "");
+  const [minutes, setMinutes] = useDraftState<number>(`request:${userId}:minutes`, 45);
+  const [when, setWhen] = useDraftState(`request:${userId}:when`, "");
+  const [fare, setFare] = useDraftState(`request:${userId}:fare`, 15000);
   const [isFareOpen, setIsFareOpen] = useState(false);
   const [suggestion, setSuggestion] = useState<FareSuggestion | null>(null);
-  const [pickup, setPickup] = useState<PickupValue | null>(home);
+  const [pickup, setPickup] = useDraftState<PickupValue | null>(`request:${userId}:pickup`, home);
   const [nearby, setNearby] = useState<number | null>(null);
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [highlight, setHighlight] = useState<string[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const publishLock = useRef(false);
   const [assistantText, setAssistantText] = useState("");
   const [assistantHidden, setAssistantHidden] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -479,15 +492,16 @@ export function OwnerExploreScreen({ userId, onPicked = () => undefined, onGo }:
   const [requests, setRequests] = useState<OwnerRequestItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<ReadonlySet<string>>(() => new Set());
-  const [payment, setPayment] = useState<PaymentMethod>("cash");
+  const [payment, setPayment] = useDraftState<PaymentMethod>(`request:${userId}:payment`, "cash");
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const now = useNow(30_000);
 
   // A fare the assistant filled must survive the suggestion refetch it triggers.
-  const keepFare = useRef(false);
+  const keepFare = useRef(hasSessionDraft(`request:${userId}:fare`));
   // Once the owner touches the field, a late profile answer must not overwrite it.
-  const pickupTouched = useRef(false);
+  const pickupTouched = useRef(hasSessionDraft(`request:${userId}:pickup`));
+  const paymentTouched = useRef(hasSessionDraft(`request:${userId}:payment`));
   const pinLat = pickup?.lat;
   const pinLng = pickup?.lng;
 
@@ -528,7 +542,7 @@ export function OwnerExploreScreen({ userId, onPicked = () => undefined, onGo }:
       .then((profile) => {
         if (isMounted) {
           setFavorites(new Set(profile.walkers.filter((walker) => walker.favorite).map((walker) => walker.walkerId)));
-          if (profile.paymentMethod) {
+          if (profile.paymentMethod && !paymentTouched.current) {
             setPayment(profile.paymentMethod);
           }
           const saved = profile.home;
@@ -591,11 +605,14 @@ export function OwnerExploreScreen({ userId, onPicked = () => undefined, onGo }:
   const maxFare = Math.min(MAX_FARE_COP, suggestion?.maxCop ?? MAX_FARE_COP);
 
   async function publish(input: BiddingRequestInput) {
+    if (publishLock.current) return;
+    publishLock.current = true;
     setIsSending(true);
     setActionError(null);
     setNotice(null);
     try {
       const created = await createBiddingRequest(input);
+      clearSessionDrafts(`request:${userId}:`);
       if (input.pickupLabel !== undefined) {
         rememberPickup({ label: input.pickupLabel, lat: input.pickupLat, lng: input.pickupLng });
       }
@@ -611,6 +628,7 @@ export function OwnerExploreScreen({ userId, onPicked = () => undefined, onGo }:
     } catch (error: unknown) {
       setActionError(exploreError(error, "No pudimos publicar tu solicitud."));
     } finally {
+      publishLock.current = false;
       setIsSending(false);
     }
   }
@@ -648,6 +666,7 @@ export function OwnerExploreScreen({ userId, onPicked = () => undefined, onGo }:
   }
 
   function choosePayment(next: PaymentMethod) {
+    paymentTouched.current = true;
     setPayment(next);
     setIsPaymentOpen(false);
     // Remember it as the profile's preferred method; the request works without it.

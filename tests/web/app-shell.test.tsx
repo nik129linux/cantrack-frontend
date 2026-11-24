@@ -192,7 +192,7 @@ describe("App shell", () => {
     expect(screen.getByRole("button", { name: "Agregar perro" })).toBeInTheDocument();
   });
 
-  it("logs out through the Salir button", async () => {
+  it("logs out from Perfil without a floating logout button", async () => {
     mockGetSession.mockResolvedValue({ data: ownerSession() });
     const { supabase } = await import("../../apps/web/src/lib/supabase.js");
     const signOut = supabase.auth.signOut as unknown as ReturnType<typeof vi.fn>;
@@ -202,7 +202,13 @@ describe("App shell", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole("button", { name: "Salir" }));
+    await screen.findByRole("navigation", { name: "Principal" });
+    expect(screen.queryByRole("button", { name: "Salir" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Perfil", exact: true }));
+    const modeSwitch = await screen.findByRole("button", { name: "Modo paseador" });
+    const exit = screen.getByRole("button", { name: "Salir", exact: true });
+    expect(modeSwitch.parentElement).toContainElement(exit);
+    await user.click(exit);
     await vi.waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
     expect(mockLogoutAccount).toHaveBeenCalledWith(undefined);
     expect(signOut).toHaveBeenCalledWith({ scope: "local" });

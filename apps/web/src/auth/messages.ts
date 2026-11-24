@@ -8,12 +8,12 @@ export const authCopy = {
     owner: {
       title: "Soy dueño",
       text: "Encuentra a alguien de confianza para pasear a tu peludo.",
-      perks: ["Paseo en vivo", "Fotos del paseo", "Pago seguro"],
+      perks: ["Paseo en vivo", "Fotos del paseo", "Pago acordado"],
     },
     walker: {
       title: "Soy paseador",
       text: "Pasea perros cerca de ti y organiza tu día.",
-      perks: ["Tu propio horario", "Rutas inteligentes", "Pagos semanales"],
+      perks: ["Tu propio horario", "Rutas inteligentes", "Tarifa por paseo"],
     },
     next: "Continuar",
     haveAccount: "¿Ya tienes cuenta?",

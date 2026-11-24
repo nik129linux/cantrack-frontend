@@ -60,6 +60,15 @@ async function renderWithPresence(props: Record<string, unknown> = {}) {
 }
 
 describe("Walker Solicitudes", () => {
+  it("shows the dog's photos before sending any offer", async () => {
+    mockOpen.mockResolvedValue([card({ dogPhotos: ["https://images.example/luna.webp"] })]);
+    await renderScreen();
+    const gallery = await screen.findByRole("list", { name: "Fotos de referencia de Luna" });
+    expect(within(gallery).getByRole("img", { name: "Foto 1 de Luna" })).toHaveAttribute("src", "https://images.example/luna.webp");
+    expect(screen.getByRole("button", { name: "Aceptar $20.000" })).toBeEnabled();
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     cleanup();
     for (const mock of [mockOpen, mockSend, mockWithdraw, mockMine, mockAvailability, mockSetAvailability]) mock.mockReset();

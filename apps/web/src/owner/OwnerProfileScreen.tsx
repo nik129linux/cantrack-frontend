@@ -528,7 +528,7 @@ export function OwnerProfileScreen({ userId, onSignOut, onGo }: OwnerProfileScre
         </div>
       </Section>
 
-      <ModeSwitch role="owner" />
+      <ModeSwitch role="owner" onSignOut={() => onSignOut()} />
     </div>
   );
 }

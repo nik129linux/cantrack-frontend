@@ -94,12 +94,13 @@
   animation: wg-rise 360ms var(--ease-out) both;
 }
 
-.wroute__notice span {
+/* Only the message grows; MascotSprite is also a span with a fixed frame size. */
+.wroute__notice > span:not(.mascot-sprite) {
   flex: 1 1 200px;
   font-size: 1.05rem;
 }
 
-.wroute__notice--info span {
+.wroute__notice--info > span:not(.mascot-sprite) {
   font-size: 14px;
 }
 
@@ -267,6 +268,7 @@
 }
 
 .wroute__map {
+  isolation: isolate;
   position: sticky;
   top: 14px;
   overflow: hidden;
@@ -288,7 +290,7 @@
   position: absolute;
   bottom: 12px;
   left: 12px;
-  z-index: 500;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 6px;

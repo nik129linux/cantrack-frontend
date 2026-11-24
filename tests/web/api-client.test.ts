@@ -12,6 +12,8 @@ vi.mock("../../apps/web/src/lib/supabase.js", () => ({
 }));
 
 const mockFetch = vi.fn();
+const resizeImage = vi.hoisted(() => vi.fn(async (file: File) => file));
+vi.mock("../../apps/web/src/lib/image.js", () => ({ resizeImage }));
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -65,6 +67,18 @@ describe("API client", () => {
     const headers = new Headers(init.headers);
     expect(headers.has("Content-Type")).toBe(false);
     expect(headers.get("Authorization")).toBe("Bearer tok-123");
+  });
+
+  it("reduces large reference photos before sending the multipart upload", async () => {
+    const reduced = new Blob(["small jpeg"], { type: "image/jpeg" });
+    resizeImage.mockResolvedValueOnce(reduced as File);
+    mockFetch.mockResolvedValueOnce(jsonResponse({ id: "dog-1", name: "Luna" }));
+    const { enrollPhotos } = await api();
+    const original = new File([new Uint8Array(3_000_000)], "large.png", { type: "image/png" });
+    await enrollPhotos("dog-1", [original]);
+    const sent = mockFetch.mock.calls[0][1].body.get("image") as File;
+    expect(sent.size).toBe(reduced.size);
+    expect(sent.type).toBe("image/jpeg");
   });
 
   it("fetchDogs maps the profile and photo status without exposing raw row fields", async () => {

@@ -408,7 +408,14 @@ export type WalkAction =
 export type WalkDetail = {
   id: string;
   status: string;
-  dog: { id: string; name: string };
+  dog: {
+    id: string | null;
+    name: string | null;
+    breed?: string | null;
+    notes?: string | null;
+    photos?: string[];
+    care?: Record<string, unknown>;
+  };
   /** Always present; `id` is null until a walker is assigned. */
   walker: null | {
     id: string | null;
@@ -690,6 +697,11 @@ export type RequestCard = {
   status: "open";
   dogId: string;
   dogName: string | null;
+  /** Signed reference photos of the dog on this eligible request. */
+  dogPhotos?: string[];
+  dogBreed?: string | null;
+  dogNotes?: string | null;
+  dogCare?: Record<string, unknown>;
   ownerName: string | null;
   requestedTime: string;
   windowEnd: string;
@@ -971,6 +983,8 @@ export type ClientDog = {
   profile: DogCareProfile | null;
   /** The walker's own private note. */
   note?: string | null;
+  /** Private reference photos shared by the owner, with expiring signed URLs. */
+  photos?: string[];
 };
 
 export type ClientDetail = Omit<Client, "dogs"> & {

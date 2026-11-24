@@ -27,6 +27,7 @@ export const REFETCH_KM = 0.06;
 export const SHARE_EVERY_MS = 20_000;
 /** How often the demo walker takes a step, in ms. */
 const DEMO_STEP_MS = 1000;
+export const STREET_RETRY_MS = 15_000;
 
 export type NavTarget = {
   requestId: string;
@@ -88,13 +89,32 @@ function useLivePosition(target: Point, from: Point | null, demo: boolean): Live
  * opens and again only after he has walked away from the routed start, so a
  * position arriving every second never becomes a request every second.
  */
-function useStreetRoute(walkerId: string, target: Point, point: Point | null, enabled: boolean): WalkingRoute | null {
+function useStreetRoute(walkerId: string, target: Point, point: Point | null, enabled: boolean) {
   const [route, setRoute] = useState<WalkingRoute | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const routedFrom = useRef<Point | null>(null);
   const asking = useRef(false);
+  const generation = useRef(0);
+  const retryTimer = useRef<number | null>(null);
+
+  // A new GPS fix must not invalidate an in-flight answer. Only a different
+  // trip, arrival or unmount ends that request's lifetime.
+  useEffect(() => {
+    generation.current += 1;
+    routedFrom.current = null;
+    asking.current = false;
+    setRoute(null);
+    setLoading(false);
+    return () => {
+      generation.current += 1;
+      if (retryTimer.current !== null) window.clearTimeout(retryTimer.current);
+      retryTimer.current = null;
+    };
+  }, [walkerId, target, enabled]);
 
   useEffect(() => {
-    if (!enabled || point === null || asking.current) {
+    if (!enabled || point === null || asking.current || retryTimer.current !== null) {
       return;
     }
     const last = routedFrom.current;
@@ -102,30 +122,39 @@ function useStreetRoute(walkerId: string, target: Point, point: Point | null, en
       return;
     }
     const from = point;
+    const requestGeneration = generation.current;
     asking.current = true;
-    routedFrom.current = from;
-    let alive = true;
+    setLoading(true);
+    let retry = false;
     fetchWalkingRoute(walkerId, from, target)
       .then((answer) => {
-        if (alive) {
-          setRoute(answer.source === "osrm" ? answer : null);
+        if (generation.current === requestGeneration) {
+          const streets = answer.source === "osrm" && answer.geometry.length > 1;
+          if (streets) {
+            setRoute(answer);
+            routedFrom.current = from;
+          } else {
+            retry = true;
+          }
         }
       })
       .catch(() => {
-        // No streets: the panel keeps guiding with the direct line.
-        if (alive) {
-          setRoute(null);
-        }
+        retry = true;
       })
       .finally(() => {
+        if (generation.current !== requestGeneration) return;
         asking.current = false;
+        setLoading(false);
+        if (retry) {
+          retryTimer.current = window.setTimeout(() => {
+            retryTimer.current = null;
+            setAttempt((value) => value + 1);
+          }, STREET_RETRY_MS);
+        }
       });
-    return () => {
-      alive = false;
-    };
-  }, [walkerId, target, point, enabled]);
+  }, [walkerId, target, point, enabled, attempt]);
 
-  return route;
+  return { route, loading };
 }
 
 /**
@@ -204,7 +233,7 @@ export function NavPanel({
 
   const direct = point === null ? null : haversineKm(point, destination);
   const arrived = direct !== null && direct <= ARRIVED_KM;
-  const route = useStreetRoute(walkerId, destination, point, !demo && !arrived);
+  const { route, loading: routeLoading } = useStreetRoute(walkerId, destination, point, !demo && !arrived);
 
   const path = useMemo<Point[]>(
     () => (route?.geometry ?? []).map(([lat, lng]) => ({ lat, lng })),
@@ -264,7 +293,7 @@ export function NavPanel({
     hint = `En ${formatDistance(guide.toTurnKm)} · faltan ${formatDistance(guide.remainingKm)} · ${walkMinutes(guide.remainingKm)} min`;
   } else if (direct !== null) {
     headline = `${formatDistance(direct)} · ${walkMinutes(direct)} min`;
-    hint = `Camina ${heading} hasta la recogida de ${dog}.`;
+    hint = `La recogida está ${heading}. Distancia aproximada en línea recta.`;
   }
 
   return (
@@ -284,14 +313,20 @@ export function NavPanel({
           </div>
         </div>
         {error !== null ? <p className="wg__warn" role="alert">{error}</p> : null}
+        {!demo && !arrived && point !== null && route === null ? (
+          <p className={routeLoading ? "wg__muted" : "wg__warn"}>
+            {routeLoading
+              ? "Calculando la ruta por calles…"
+              : "No pudimos cargar las calles. Reintentaremos en unos segundos."}
+          </p>
+        ) : null}
       </div>
 
       <div className="wroute__map wnav__map">
         <MarkersMap
           label={`Mapa hacia ${dog}`}
           markers={markers}
-          connect
-          dashed
+          connect={route !== null}
           path={route?.geometry ?? null}
           autoFit={false}
           focus={focus}

@@ -9,12 +9,13 @@ import userEvent from "@testing-library/user-event";
 
 const mockRoute = vi.fn();
 const mockCheckIn = vi.fn();
+const mockWalkDetail = vi.fn();
 const RESIZED = new Blob(["small"], { type: "image/jpeg" });
 
 vi.mock("../../apps/web/src/lib/marketplace.js", () => ({
   fetchDayRoute: mockRoute,
   fetchDayRoutePath: vi.fn().mockRejectedValue(new Error("no street line in this test")),
-  fetchWalkDetail: vi.fn(),
+  fetchWalkDetail: mockWalkDetail,
   checkInWalk: mockCheckIn,
   checkOutWalk: vi.fn(),
   sendGpsPoints: vi.fn(),
@@ -66,10 +67,23 @@ async function startWithPhoto(ai: { match: string; similarity: number | null }) 
 beforeEach(() => {
   mockRoute.mockReset().mockResolvedValue(dayRoute());
   mockCheckIn.mockReset();
+  mockWalkDetail.mockReset();
 });
 afterEach(cleanup);
 
 describe("Check-in photo", () => {
+  it("shows the owner's reference photos and care notes before pickup", async () => {
+    mockWalkDetail.mockResolvedValue({
+      dog: { id: "dog-1", name: "Luna", photos: ["https://photos.test/luna.webp"],
+        breed: "Caniche", notes: "Evitar otros perros", care: { temperament: "reactive", leash_trained: true } },
+    });
+    const { sheet } = await openSheet();
+    expect(await within(sheet).findByRole("img", { name: "Foto 1 de Luna" })).toHaveAttribute("src", "https://photos.test/luna.webp");
+    expect(within(sheet).getByText("Raza: Caniche")).toBeInTheDocument();
+    expect(within(sheet).getByText("Indicaciones: Evitar otros perros")).toBeInTheDocument();
+    expect(within(sheet).getByText("Carácter: Reactivo")).toBeInTheDocument();
+  });
+
   it("starts without a photo and shows no AI result", async () => {
     mockCheckIn.mockResolvedValue({ id: "b2", status: "in_walk", walkerId: "walker-1" });
     const { user, sheet } = await openSheet();

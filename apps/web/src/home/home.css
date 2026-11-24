@@ -533,7 +533,7 @@
 /* Real screens (existing light screens inside a frosted panel) ------------- */
 
 .home__logout {
-  position: fixed;
+  position: static;
   top: max(14px, var(--safe-top, env(safe-area-inset-top, 0px)));
   right: 14px;
   z-index: 20;
@@ -550,6 +550,18 @@
 .home__logout:focus-visible {
   outline: 3px solid var(--lime-text);
   outline-offset: 2px;
+}
+
+.home__connection {
+  position: relative;
+  z-index: 25;
+  margin: 12px 14px 0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #603919;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .home__grid--screen {

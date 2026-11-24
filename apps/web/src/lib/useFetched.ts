@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "./apiError.js";
+import { useRefreshOnReturn } from "./useRefreshOnReturn.js";
 
 export type Fetched<T> = {
   data: T | null;
@@ -33,27 +34,40 @@ export function useFetched<T>(
   loadRef.current = load;
   const mounted = useRef(true);
   const dataRef = useRef<T | null>(null);
+  const generation = useRef(0);
+  const inFlight = useRef(false);
+  const retryAt = useRef(0);
 
   const run = useCallback(async () => {
+    if (!mounted.current || inFlight.current || Date.now() < retryAt.current) return;
+    const current = generation.current;
+    inFlight.current = true;
     try {
       const next = await loadRef.current();
-      if (mounted.current) {
+      if (mounted.current && current === generation.current) {
         dataRef.current = next;
         setData(next);
         setError(null);
       }
     } catch (failure: unknown) {
-      if (mounted.current) {
+      if (mounted.current && current === generation.current) {
+        if (failure instanceof ApiError && failure.status === 429) {
+          retryAt.current = Date.now() + (failure.retryAfter ?? 30) * 1000;
+        }
         setError(failure);
       }
     } finally {
-      if (mounted.current) {
+      if (mounted.current && current === generation.current) {
+        inFlight.current = false;
         setIsLoading(false);
       }
     }
   }, []);
 
   useEffect(() => {
+    generation.current += 1;
+    inFlight.current = false;
+    retryAt.current = 0;
     mounted.current = true;
     dataRef.current = null;
     setData(null);
@@ -61,15 +75,19 @@ export function useFetched<T>(
     void run();
     return () => {
       mounted.current = false;
+      generation.current += 1;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
+
+  useRefreshOnReturn(() => void run());
 
   useEffect(() => {
     if (pollMs === undefined) {
       return;
     }
     const id = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
       // A 429 asks us to wait: skip this tick rather than hammer the API.
       if (shouldPoll !== undefined && !shouldPoll(dataRef.current)) {
         return;

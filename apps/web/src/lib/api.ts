@@ -1,6 +1,7 @@
 import { beginWork } from "../mascot/mascotBus.js";
 import { ApiError } from "./apiError.js";
 import { supabase } from "./supabase.js";
+import { resizeImage } from "./image.js";
 
 export { ApiError };
 
@@ -307,7 +308,11 @@ export function suggestDogTraits(dogId: string, photo: Blob): Promise<DogTraits>
 export async function enrollPhotos(dogId: string, photos: File[]): Promise<Dog> {
   const body = new FormData();
   for (const photo of photos) {
-    body.append("image", photo);
+    const reduced = await resizeImage(photo);
+    if (reduced.size > 5 * 1024 * 1024) {
+      throw new ApiError("Reference photo is too large.", 413);
+    }
+    body.append("image", reduced, reduced === photo ? photo.name : "dog.jpg");
   }
 
   const row = await request<DogRow>(`/dogs/${encodeURIComponent(dogId)}/photos`, {

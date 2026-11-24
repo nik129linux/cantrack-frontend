@@ -12,6 +12,7 @@ import {
 import { MascotSprite } from "../mascot/MascotSprite.js";
 import { Avatar } from "../ui/Avatar.js";
 import { DogLoader } from "../ui/DogLoader.js";
+import { PhotoGallery } from "../ui/PhotoGallery.js";
 import { PhotoInitial } from "../ui/PhotoInitial.js";
 import { PhoneIcon, PinIcon, ShieldIcon } from "../auth/icons.js";
 import "./walker-glass.css";
@@ -213,6 +214,13 @@ function CareCard({
           <h3 className="wg__card-title">{dog.name ?? "Un perro"}</h3>
           {dog.breed ? <p className="wg__muted">{dog.breed}</p> : null}
         </div>
+      </div>
+
+      <div className="wclients__dog-photos">
+        <h4 className="wg__card-title">Fotos de referencia</h4>
+        {(dog.photos?.length ?? 0) > 0 ? (
+          <PhotoGallery photos={dog.photos ?? []} name={dog.name ?? "este perro"} className="wclients__photos" />
+        ) : <p className="wg__muted">El dueño aún no ha añadido fotos de referencia.</p>}
       </div>
 
       {dog.notes ? <p className="wclients__owner-note">{dog.notes}</p> : null}

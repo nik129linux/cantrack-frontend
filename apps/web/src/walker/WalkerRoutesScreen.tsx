@@ -23,6 +23,7 @@ import { resizeImage } from "../lib/image.js";
 import { MarkersMap, type MapMarker } from "../map/MarkersMap.js";
 import { MascotSprite } from "../mascot/MascotSprite.js";
 import { DogLoader } from "../ui/DogLoader.js";
+import { PhotoGallery } from "../ui/PhotoGallery.js";
 import { ClockIcon, PhoneIcon, PinIcon, RouteIcon } from "../auth/icons.js";
 import { NavPanel, type NavTarget } from "./NavPanel.js";
 import { OnlinePill } from "./OnlinePill.js";
@@ -103,10 +104,10 @@ function useNow(on: boolean): number {
   return now;
 }
 
-type GpsState = "starting" | "sharing" | "blocked";
+type GpsState = "starting" | "sharing" | "blocked" | "retrying";
 
 /** Streams the walker's position to the API in batches while a walk is in progress. */
-function useGpsStream(walkId: string | null, onEnded: () => void, demo = false): GpsState {
+export function useGpsStream(walkId: string | null, onEnded: () => void, demo = false): GpsState {
   const [state, setState] = useState<GpsState>("starting");
   const buffer = useRef<ReplayPoint[]>([]);
   const lastEpoch = useRef(0);
@@ -114,6 +115,8 @@ function useGpsStream(walkId: string | null, onEnded: () => void, demo = false):
   ended.current = onEnded;
 
   useEffect(() => {
+    buffer.current = [];
+    lastEpoch.current = 0;
     if (walkId === null) return;
     if (demo) {
       setState("sharing");
@@ -124,29 +127,48 @@ function useGpsStream(walkId: string | null, onEnded: () => void, demo = false):
       return;
     }
     setState("starting");
+    let alive = true;
+    let pending = false;
+    let retryAt = 0;
     const watch = navigator.geolocation.watchPosition(
       (position) => {
         // Points must be strictly increasing in time.
         const atEpoch = Math.max(Math.floor(position.timestamp / 1000), lastEpoch.current + 1);
         lastEpoch.current = atEpoch;
         buffer.current.push({ lat: position.coords.latitude, lng: position.coords.longitude, atEpoch });
-        setState("sharing");
+        buffer.current = buffer.current.slice(-200);
+        setState((current) => current === "blocked" ? "starting" : current);
       },
       () => setState("blocked"),
       { enableHighAccuracy: true },
     );
-    const id = window.setInterval(() => {
+    async function flush() {
+      if (pending || Date.now() < retryAt) return;
       const points = buffer.current.splice(0, 20);
       if (points.length === 0) return;
-      void sendGpsPoints(walkId, points).catch((failure: unknown) => {
+      pending = true;
+      try {
+        await sendGpsPoints(walkId!, points);
+        if (alive) setState("sharing");
+      } catch (failure: unknown) {
+        if (!alive) return;
         if (failure instanceof ApiError && failure.status === 409) {
           ended.current();
+        } else {
+          buffer.current = [...points, ...buffer.current].slice(-200);
+          if (failure instanceof ApiError && failure.status === 429) retryAt = Date.now() + (failure.retryAfter ?? 12) * 1000;
+          setState("retrying");
         }
-      });
-    }, GPS_BATCH_MS);
+      } finally { pending = false; }
+    }
+    const id = window.setInterval(() => void flush(), GPS_BATCH_MS);
+    const resume = () => void flush();
+    window.addEventListener("online", resume);
     return () => {
+      alive = false;
       navigator.geolocation.clearWatch(watch);
       window.clearInterval(id);
+      window.removeEventListener("online", resume);
     };
   }, [walkId, demo]);
 
@@ -185,25 +207,51 @@ function Confirm({
  * reference photos. The photo never blocks the walk: "Iniciar sin foto" is always there.
  */
 function StartWalkSheet({
+  requestId,
+  demo,
   dog,
   busy,
   onStart,
   onClose,
 }: {
+  requestId: string;
+  demo: boolean;
   dog: string;
   busy: boolean;
   onStart: (photo?: File) => void;
   onClose: () => void;
 }) {
   const [photo, setPhoto] = useState<File | null>(null);
+  const [detail, setDetail] = useState<WalkDetail | null>(null);
+  const [detailError, setDetailError] = useState(false);
   const sheet = useRef<HTMLElement>(null);
   // The button that opened it can be far down the list: bring the sheet into view.
   useEffect(() => {
     sheet.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
   }, []);
+  useEffect(() => {
+    if (demo) return;
+    let alive = true;
+    void (async () => {
+      try {
+        const value = await fetchWalkDetail(requestId);
+        if (alive) setDetail(value);
+      } catch {
+        if (alive) setDetailError(true);
+      }
+    })();
+    return () => { alive = false; };
+  }, [demo, requestId]);
   return (
     <section ref={sheet} className="glass wg__card wg__rise" aria-label={`Iniciar paseo con ${dog}`}>
       <h2 className="wroute__dog">Iniciar paseo con {dog}</h2>
+      {detail?.dog.photos?.length ? <PhotoGallery photos={detail.dog.photos} name={dog} /> : null}
+      {detail?.dog.breed ? <p className="wg__muted">Raza: {detail.dog.breed}</p> : null}
+      {detail?.dog.notes ? <p className="wg__muted">Indicaciones: {detail.dog.notes}</p> : null}
+      {detail?.dog.care && Object.keys(detail.dog.care).length > 0 ? (
+        <DogCareChips care={detail.dog.care} dog={dog} />
+      ) : null}
+      {detailError ? <p className="wg__muted" role="status">No pudimos cargar las indicaciones del perro.</p> : null}
       <p className="wg__muted">Toma una foto de {dog} y la comparamos con las del dueño. Es opcional.</p>
       {busy ? <DogLoader label={photo !== null ? "Revisando la foto…" : "Iniciando el paseo…"} /> : null}
       <div className="wroute__row">
@@ -229,6 +277,27 @@ function StartWalkSheet({
         <button type="button" className="wg__ghost" disabled={busy} onClick={onClose}>Cancelar</button>
       </div>
     </section>
+  );
+}
+
+function DogCareChips({ care, dog }: { care: Record<string, unknown>; dog: string }) {
+  const labels: Record<string, string> = {
+    size: "Tamaño", temperament: "Carácter", energy: "Energía", leash_trained: "Usa correa",
+    leashTrained: "Usa correa", allergies: "Alergias", medical_notes: "Salud", medicalNotes: "Salud",
+  };
+  const values: Record<string, string> = {
+    small: "Pequeño", medium: "Mediano", large: "Grande", friendly: "Sociable", shy: "Tímido",
+    reactive: "Reactivo", low: "Baja", high: "Alta", true: "Sí", false: "No",
+  };
+  const entries = Object.entries(care).filter(([, value]) => value !== null && value !== undefined && value !== "");
+  if (entries.length === 0) return null;
+  return (
+    <ul className="wg__chips" aria-label={`Cuidados de ${dog}`}>
+      {entries.map(([key, value]) => {
+        const text = typeof value === "boolean" ? String(value) : typeof value === "string" ? value : "";
+        return <li key={key} className="wg__chip">{labels[key] ?? key}: {values[text] ?? text}</li>;
+      })}
+    </ul>
   );
 }
 
@@ -331,7 +400,9 @@ function ActiveCard({
         <span className="wg__chip" data-tone="lime">En curso</span>
         <span className="wroute__gps" data-state={gps}>
           <span className="wg__dot" aria-hidden="true" />
-          {gps === "blocked" ? "Activa la ubicación para compartir el recorrido" : "Compartiendo ubicación"}
+          {gps === "blocked" ? "Activa la ubicación para compartir el recorrido"
+            : gps === "retrying" ? "Sin conexión: guardamos las ubicaciones para reenviarlas"
+            : gps === "starting" ? "Preparando el envío de ubicación…" : "Compartiendo ubicación"}
         </span>
       </div>
       <div className="wroute__active-body">
@@ -360,6 +431,7 @@ function ActiveCard({
           </div>
         </div>
       </div>
+      <DogWalkInfo requestId={walk.requestId} dog={dog} demo={demo} />
       {asking ? (
         <div className="wroute__confirm" role="group" aria-label={`¿Terminar el paseo de ${dog}?`}>
           <p>¿Terminar el paseo de {dog}?</p>
@@ -393,6 +465,32 @@ function ActiveCard({
         </button>
       )}
     </section>
+  );
+}
+
+function DogWalkInfo({ requestId, dog, demo }: { requestId: string; dog: string; demo: boolean }) {
+  const [detail, setDetail] = useState<WalkDetail | null>(null);
+  useEffect(() => {
+    if (demo) return;
+    let alive = true;
+    void (async () => {
+      try {
+        const value = await fetchWalkDetail(requestId);
+        if (alive) setDetail(value);
+      } catch {
+        // Care details are supplemental; the walk controls stay usable if this read fails.
+      }
+    })();
+    return () => { alive = false; };
+  }, [demo, requestId]);
+  if (demo || !detail || !detail.dog) return null;
+  return (
+    <div className="wroute__dog-info" aria-label={`Información de ${dog}`}>
+      {detail.dog.photos?.length ? <PhotoGallery photos={detail.dog.photos} name={dog} /> : null}
+      {detail.dog.breed ? <p className="wg__muted">Raza: {detail.dog.breed}</p> : null}
+      {detail.dog.notes ? <p className="wg__muted">Indicaciones: {detail.dog.notes}</p> : null}
+      {detail.dog.care && Object.keys(detail.dog.care).length > 0 ? <DogCareChips care={detail.dog.care} dog={dog} /> : null}
+    </div>
   );
 }
 
@@ -679,6 +777,7 @@ export function WalkerRoutesScreen({ userId, onGoHome = () => undefined, onGoReq
   const [navId, setNavId] = useState<string | null>(null);
   // The day as one line along the streets, kept with the day it was asked for.
   const [dayPath, setDayPath] = useState<{ date: string; line: DayPath } | null>(null);
+  const actionLock = useRef(false);
 
   const demoRef = useRef<Record<string, DayRoute>>({});
 
@@ -729,6 +828,8 @@ export function WalkerRoutesScreen({ userId, onGoHome = () => undefined, onGoReq
 
   /** Run a walk action; true when it went through. */
   async function run(requestId: string, kind: Action, action: () => Promise<unknown>, after: Notice | null): Promise<boolean> {
+    if (actionLock.current) return false;
+    actionLock.current = true;
     setBusyId(requestId);
     setActionError(null);
     if (preview) {
@@ -738,6 +839,7 @@ export function WalkerRoutesScreen({ userId, onGoHome = () => undefined, onGoReq
       }
       setNotice(after);
       setBusyId(null);
+      actionLock.current = false;
       await load();
       return true;
     }
@@ -749,6 +851,7 @@ export function WalkerRoutesScreen({ userId, onGoHome = () => undefined, onGoReq
       setActionError(routesError(failure, "No pudimos actualizar el paseo."));
       return false;
     } finally {
+      actionLock.current = false;
       setBusyId(null);
       await load();
     }
@@ -916,6 +1019,8 @@ export function WalkerRoutesScreen({ userId, onGoHome = () => undefined, onGoReq
       {starting !== null ? (
         <StartWalkSheet
           key={starting.requestId}
+          requestId={starting.requestId}
+          demo={preview}
           dog={starting.dog}
           busy={busyId === starting.requestId}
           onStart={(photo) => void confirmStart(photo)}
