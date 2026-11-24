@@ -2,7 +2,7 @@
 import { ApiError } from "./apiError.js";
 
 const KNOWN_ERRORS: ReadonlyArray<readonly [RegExp, string]> = [
-  [/failed to fetch|networkerror|load failed/i, "No pudimos conectar con el servidor. Revisa que la API esté encendida."],
+  [/failed to fetch|networkerror|load failed|network request failed/i, "No pudimos conectar. Revisa tu conexión y vuelve a intentarlo; tus datos siguen en el formulario."],
   [/bearer token is required|invalid authentication token/i, "Tu sesión venció. Vuelve a ingresar."],
   [/This offer is no longer available/i, "Otro paseador ya tomó esta oferta o el dueño la canceló."],
   [/Create your walker profile before accepting/i, "Crea tu perfil de paseador antes de aceptar ofertas."],
@@ -20,6 +20,10 @@ const KNOWN_ERRORS: ReadonlyArray<readonly [RegExp, string]> = [
 /** Maps an error to Spanish; anything unknown falls back to `fallback`. */
 export function translateApiError(error: unknown, fallback: string): string {
   if (error instanceof ApiError) {
+    if (error.status === 401) return "Tu sesión venció. Vuelve a ingresar para continuar.";
+    if (error.status === 413) {
+      return "Una foto pesa demasiado. Elige una imagen JPG más pequeña o una captura de pantalla y vuelve a guardar.";
+    }
     if (error.status >= 500) {
       return error.errorId !== null
         ? `Algo falló de nuestro lado. Código: ${error.errorId}`

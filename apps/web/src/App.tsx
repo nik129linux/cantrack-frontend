@@ -19,6 +19,8 @@ import {
   setAccountRole,
 } from "./lib/marketplace.js";
 import { readPreviewSession } from "./lib/preview.js";
+import { clearSessionDrafts } from "./lib/useDraftState.js";
+import { saveHomePoint } from "./lib/homePoint.js";
 import { supabase } from "./lib/supabase.js";
 import { DogLoader } from "./ui/DogLoader.js";
 import { beginFarewell } from "./mascot/mascotBus.js";
@@ -247,6 +249,8 @@ export function App() {
   const userId = session?.user.id ?? "";
   const hasKnownRole = role === "owner" || role === "walker";
   const logout = (scope?: "global") => {
+    clearSessionDrafts();
+    saveHomePoint(null);
     if (preview !== null) {
       window.location.assign(window.location.pathname);
       return;

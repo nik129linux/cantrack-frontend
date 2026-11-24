@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRefreshOnReturn } from "../lib/useRefreshOnReturn.js";
 import { ApiError } from "../lib/apiError.js";
 import { bogotaDate, formatCop, formatHourBogota, formatWhenBogota } from "../lib/format.js";
 import {
@@ -23,6 +24,7 @@ import {
 import { MarkersMap, type MapMarker } from "../map/MarkersMap.js";
 import { DogLoader } from "../ui/DogLoader.js";
 import { PhotoInitial } from "../ui/PhotoInitial.js";
+import { LocationFreshness } from "../ui/LocationFreshness.js";
 import { WalkerPublicProfile } from "./WalkerPublicProfile.js";
 import { MascotSprite } from "../mascot/MascotSprite.js";
 import "./explore.css";
@@ -187,20 +189,41 @@ function WalkDetailView({ walkId, onBack, onRepeated, onChanged }: DetailProps) 
   const [hoverStar, setHoverStar] = useState(0);
   const [isBusy, setIsBusy] = useState(false);
   const [showWalker, setShowWalker] = useState(false);
+  const fetchGeneration = useRef(0);
+  const fetching = useRef(false);
+  const detailRef = useRef(detail);
+  detailRef.current = detail;
+  const actionLock = useRef(false);
 
   const load = useCallback(async () => {
+    if (fetching.current) return;
+    fetching.current = true;
+    const generation = fetchGeneration.current;
     try {
-      setDetail(await fetchWalkDetail(walkId));
+      const next = await fetchWalkDetail(walkId);
+      if (generation !== fetchGeneration.current) return;
+      setDetail(next);
       setError(null);
     } catch (failure: unknown) {
-      setDetail(null);
+      if (generation !== fetchGeneration.current) return;
       setError(walksError(failure, "No pudimos cargar el paseo."));
+    } finally {
+      if (generation === fetchGeneration.current) fetching.current = false;
     }
   }, [walkId]);
 
   useEffect(() => {
+    fetchGeneration.current += 1;
+    fetching.current = false;
     void load();
+    const timer = window.setInterval(() => {
+      const status = detailRef.current?.status;
+      const waitingReport = status === "done" && detailRef.current?.report == null;
+      if (document.visibilityState !== "hidden" && status !== "in_walk" && status !== "cancelled" && status !== "expired" && (status !== "done" || waitingReport)) void load();
+    }, LIVE_POLL_MS);
+    return () => { fetchGeneration.current += 1; window.clearInterval(timer); };
   }, [load]);
+  useRefreshOnReturn(() => void load());
 
   const canTrack = detail?.allowedActions.includes("track") === true;
   useEffect(() => {
@@ -262,6 +285,8 @@ function WalkDetailView({ walkId, onBack, onRepeated, onChanged }: DetailProps) 
   }, [canApproach, walkId, load]);
 
   async function act(run: () => Promise<unknown>, done: string, kind: string) {
+    if (actionLock.current) return;
+    actionLock.current = true;
     setIsBusy(true);
     setError(null);
     setNotice(null);
@@ -282,6 +307,7 @@ function WalkDetailView({ walkId, onBack, onRepeated, onChanged }: DetailProps) 
         setError(walksError(failure, "No pudimos completar la acción."));
       }
     } finally {
+      actionLock.current = false;
       setIsBusy(false);
       setConfirmCancel(false);
     }
@@ -443,6 +469,7 @@ function WalkDetailView({ walkId, onBack, onRepeated, onChanged }: DetailProps) 
             path={coming?.route?.geometry ?? null}
             pathStraight={coming?.route?.source === "straight"}
           />
+          <LocationFreshness at={coming?.position?.updatedAt} />
         </section>
       ) : null}
 
@@ -458,6 +485,7 @@ function WalkDetailView({ walkId, onBack, onRepeated, onChanged }: DetailProps) 
           </div>
           <div className="owalks__bar" aria-hidden="true"><span style={{ width: `${progress}%` }} /></div>
           <MarkersMap label="Mapa en vivo" markers={liveMarkers} />
+          <LocationFreshness at={live?.position?.atEpoch} />
         </section>
       ) : null}
 
@@ -648,18 +676,29 @@ export function OwnerWalksScreen({ userId, onRepeated = () => undefined, onGo }:
   const [featured, setFeatured] = useState<WalkItem | null>(null);
   const [dogFilter, setDogFilter] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
+  const [summaryRefresh, setSummaryRefresh] = useState(0);
+  const loadKey = `${userId}:${tab}`;
+  const latestLoadKey = useRef(loadKey);
+  latestLoadKey.current = loadKey;
+  const pendingPages = useRef(new Set<string>());
 
   const load = useCallback(
     async (cursor?: string | null) => {
+      const key = `${userId}:${tab}`;
+      const pageKey = `${key}:${cursor ?? ""}`;
+      if (pendingPages.current.has(pageKey)) return;
+      pendingPages.current.add(pageKey);
       try {
         const page = await fetchOwnerWalks(userId, tab, cursor);
+        if (latestLoadKey.current !== key) return;
         setItems((current) => (cursor ? [...current, ...page.items] : page.items));
         setNextCursor(page.nextCursor);
         setError(null);
       } catch (failure: unknown) {
-        setError(walksError(failure, "No pudimos cargar tus paseos."));
+        if (latestLoadKey.current === key) setError(walksError(failure, "No pudimos cargar tus paseos."));
       } finally {
-        setIsLoading(false);
+        pendingPages.current.delete(pageKey);
+        if (latestLoadKey.current === key) setIsLoading(false);
       }
     },
     [userId, tab],
@@ -670,6 +709,18 @@ export function OwnerWalksScreen({ userId, onRepeated = () => undefined, onGo }:
     setItems([]);
     void load();
   }, [load, refresh]);
+
+  useRefreshOnReturn(() => { void load(); setSummaryRefresh((n) => n + 1); });
+  useEffect(() => {
+    if (tab === "past" || openId !== null) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "hidden") {
+        void load();
+        setSummaryRefresh((n) => n + 1);
+      }
+    }, LIVE_POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [load, tab, openId]);
 
   // Header: month totals, tab counters and the walk that matters right now.
   useEffect(() => {
@@ -693,7 +744,7 @@ export function OwnerWalksScreen({ userId, onRepeated = () => undefined, onGo }:
     return () => {
       alive = false;
     };
-  }, [userId, refresh]);
+  }, [userId, refresh, summaryRefresh]);
 
   const dogs = useMemo(() => {
     const seen = new Map<string, string>();

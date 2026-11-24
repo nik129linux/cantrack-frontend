@@ -240,7 +240,7 @@ describe("Walker Rutas", () => {
     const nav = await screen.findByRole("region", { name: "Cómo llegar a Max" });
     // 1.2105,-77.2792 to 1.2102,-77.2788 is about 50 m on foot.
     expect(within(nav).getByRole("status")).toHaveTextContent(/^\d+ m · \d+ min$/);
-    expect(within(nav).getByText(/Camina al sureste hasta la recogida de Max/)).toBeInTheDocument();
+    expect(within(nav).getByText(/La recogida está al sureste/)).toBeInTheDocument();
     expect(within(nav).getByTestId("map").getAttribute("data-labels")).toBe("Tú|Recogida · Max");
     expect(within(nav).queryByRole("link", { name: /Google|Waze/ })).not.toBeInTheDocument();
 
@@ -320,7 +320,7 @@ describe("Walker Rutas", () => {
     await user.click(await screen.findByRole("button", { name: "Cómo llegar a Max" }));
     const nav = await screen.findByRole("region", { name: "Cómo llegar a Max" });
     expect(within(nav).getByRole("status")).toHaveTextContent(/^\d+ m · \d+ min$/);
-    expect(within(nav).getByText(/Camina al sureste hasta la recogida de Max/)).toBeInTheDocument();
+    expect(within(nav).getByText(/La recogida está al sureste/)).toBeInTheDocument();
     expect(within(nav).queryByRole("list", { name: "Indicaciones" })).not.toBeInTheDocument();
   });
 
@@ -516,6 +516,17 @@ describe("Walker Clientes", () => {
     expect(within(notes).getByText("Mayor, camina despacio.")).toBeInTheDocument();
   });
 
+  it("shows the owner's reference photos inside the walker's dog care card", async () => {
+    mockClients.mockResolvedValue([client()]);
+    const data = detail();
+    mockClient.mockResolvedValue({ ...data, dogs: [{ ...data.dogs[0], photos: ["https://images.example/luna-1.webp", "https://images.example/luna-2.webp"] }] });
+    const user = await renderClients();
+    await user.click(await screen.findByRole("button", { name: "Abrir cliente Camila" }));
+    const gallery = await screen.findByRole("list", { name: "Fotos de referencia de Luna" });
+    expect(within(gallery).getAllByRole("img")).toHaveLength(2);
+    expect(within(gallery).getByRole("img", { name: "Foto 1 de Luna" })).toHaveAttribute("src", "https://images.example/luna-1.webp");
+  });
+
   it("gives him the door-step details only while a walk is live", async () => {
     mockClients.mockResolvedValue([client({ upcoming: 1 })]);
     mockClient.mockResolvedValue(detail());
@@ -620,6 +631,8 @@ describe("Walker Perfil", () => {
   it("shows the profile, the rating and the past walks with their rating", async () => {
     await renderProfile();
     expect(screen.getByLabelText("Nombre")).toHaveValue("Mateo");
+    const modeSwitch = screen.getByRole("button", { name: "Modo dueño" });
+    expect(modeSwitch.parentElement).toContainElement(screen.getByRole("button", { name: "Salir", exact: true }));
     expect(screen.getByText(/mateo@gmail.com · ★ 4.5 \(2\)/)).toBeInTheDocument();
     expect(await screen.findByText(/\$17\.000 · ★ 4\.5/)).toBeInTheDocument();
     expect(mockWalks).toHaveBeenCalledWith("walker-1", "past");

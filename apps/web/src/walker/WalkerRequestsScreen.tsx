@@ -17,6 +17,7 @@ import {
 import { MarkersMap } from "../map/MarkersMap.js";
 import { MascotSprite } from "../mascot/MascotSprite.js";
 import { DogLoader } from "../ui/DogLoader.js";
+import { PhotoGallery } from "../ui/PhotoGallery.js";
 import { OnlinePill } from "./OnlinePill.js";
 import { useWalkerPresence } from "./presence.js";
 import "./walker-glass.css";
@@ -126,6 +127,7 @@ function InboxCard({ card, onChanged, onDrop, onGoHome }: CardProps) {
   const minCounter = Math.max(MIN_COUNTER_COP, STEP_COP);
   const dogName = card.dogName ?? "Un perro";
   const dropped = useRef(false);
+  const actionLock = useRef(false);
 
   // The owner stops taking offers at the deadline: the card leaves by itself.
   useEffect(() => {
@@ -136,6 +138,8 @@ function InboxCard({ card, onChanged, onDrop, onGoHome }: CardProps) {
   }, [seconds, card.id, card.myOffer, onDrop]);
 
   async function run(action: () => Promise<unknown>) {
+    if (actionLock.current) return;
+    actionLock.current = true;
     setIsBusy(true);
     setError(null);
     setNeedsOnline(false);
@@ -155,6 +159,7 @@ function InboxCard({ card, onChanged, onDrop, onGoHome }: CardProps) {
         }
       }
     } finally {
+      actionLock.current = false;
       setIsBusy(false);
     }
   }
@@ -183,6 +188,19 @@ function InboxCard({ card, onChanged, onDrop, onGoHome }: CardProps) {
           <span className="wreq__clock" data-urgent={seconds < 60 ? "" : undefined}>Cierra en {clock}</span>
         </div>
       </div>
+
+      {(card.dogPhotos?.length ?? 0) > 0 ? (
+        <PhotoGallery photos={card.dogPhotos ?? []} name={dogName} className="wreq__photos" />
+      ) : <p className="wg__muted">El dueño aún no ha añadido fotos de referencia.</p>}
+      {card.dogBreed ? <p className="wg__muted">Raza: {card.dogBreed}</p> : null}
+      {card.dogNotes ? <p className="wg__muted">Indicaciones del dueño: {card.dogNotes}</p> : null}
+      {card.dogCare && Object.keys(card.dogCare).length > 0 ? (
+        <ul className="wg__chips" aria-label={`Cuidados de ${dogName}`}>
+          {Object.entries(card.dogCare).map(([key, value]) => value == null || value === "" ? null : (
+            <li key={key} className="wg__chip">{requestCareLabel(key, value)}</li>
+          ))}
+        </ul>
+      ) : null}
 
       <button
         type="button"
@@ -319,6 +337,13 @@ function InboxCard({ card, onChanged, onDrop, onGoHome }: CardProps) {
       )}
     </li>
   );
+}
+
+function requestCareLabel(key: string, value: unknown): string {
+  const labels: Record<string, string> = { size: "Tamaño", temperament: "Carácter", energy: "Energía", leash_trained: "Usa correa" };
+  const values: Record<string, string> = { small: "Pequeño", medium: "Mediano", large: "Grande", friendly: "Sociable", shy: "Tímido", reactive: "Reactivo", low: "Baja", high: "Alta", true: "Sí", false: "No" };
+  const text = typeof value === "boolean" ? String(value) : typeof value === "string" ? value : "";
+  return `${labels[key] ?? key}: ${values[text] ?? text}`;
 }
 
 const OFFER_CHIP: Record<MyOffer["status"], string> = {

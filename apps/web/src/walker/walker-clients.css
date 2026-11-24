@@ -167,6 +167,29 @@
 
 /* Care card ------------------------------------------------------------------ */
 
+.wclients__dog-photos {
+  display: grid;
+  gap: 10px;
+}
+
+.wclients__photos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wclients__photos img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  object-fit: contain;
+  background: rgb(255 255 255 / 10%);
+}
+
 .wclients__care-head {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

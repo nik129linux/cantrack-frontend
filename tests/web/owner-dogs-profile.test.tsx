@@ -202,7 +202,7 @@ describe("Diario and deletion", () => {
   });
 
   it("requires confirmation, allows cancellation, and removes the deleted dog", async () => {
-    const { user } = await openFicha("Eliminar perro");
+    const { user } = await openFicha();
     await user.click(screen.getByRole("button", { name: "Eliminar perro" }));
     expect(screen.getByText("¿Eliminar a Luna? Esta acción no se puede deshacer.")).toBeInTheDocument();
     expect(api.deleteDog).not.toHaveBeenCalled();

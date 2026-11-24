@@ -563,7 +563,7 @@ export function WalkerProfileScreen({ userId, onSignOut }: WalkerProfileScreenPr
         </div>
       </Section>
 
-      <ModeSwitch role="walker" />
+      <ModeSwitch role="walker" onSignOut={() => onSignOut()} />
     </div>
   );
 }

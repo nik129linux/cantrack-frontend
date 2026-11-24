@@ -1,0 +1,58 @@
+.photo-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.photo-gallery__thumb {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 10%);
+  cursor: zoom-in;
+}
+.photo-gallery__thumb img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: inherit;
+  object-fit: contain;
+}
+.photo-viewer { z-index: 200; }
+.photo-viewer .ui-sheet__dialog {
+  max-height: 92dvh;
+  background: #163047;
+  color: #fff;
+}
+.photo-viewer__image {
+  display: block;
+  width: 100%;
+  max-height: 65dvh;
+  object-fit: contain;
+}
+.photo-viewer__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 14px;
+}
+.photo-viewer button {
+  min-height: 44px;
+  border: 1px solid rgb(255 255 255 / 40%);
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: rgb(255 255 255 / 12%);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.photo-viewer button:disabled { opacity: .45; cursor: default; }
+.photo-gallery button:focus-visible, .photo-viewer button:focus-visible {
+  outline: 3px solid #cdf07a;
+  outline-offset: 3px;
+}

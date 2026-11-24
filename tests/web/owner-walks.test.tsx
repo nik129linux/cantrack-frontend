@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // Mis paseos (owner), on liquid glass: month summary and tab counters from
@@ -95,6 +95,22 @@ async function openLuna(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("Owner Mis paseos", () => {
+  it("refreshes an assigned walk without reopening the screen", async () => {
+    const intervals = vi.spyOn(window, "setInterval");
+    mockDetail.mockResolvedValue(detail());
+    const user = await renderScreen();
+    await openLuna(user);
+    await screen.findByRole("heading", { name: /Luna/ });
+    const before = mockDetail.mock.calls.length;
+    mockDetail.mockResolvedValue(detail({ status: "in_walk", allowedActions: ["track"] }));
+    mockLive.mockResolvedValue({ position: null, minutesElapsed: 0, trail: [] });
+    const poll = intervals.mock.calls.filter((call) => call[1] === 10_000).at(-1)?.[0];
+    expect(poll).toBeTypeOf("function");
+    await act(async () => (poll as () => void)());
+    expect(mockDetail.mock.calls.length).toBeGreaterThan(before);
+    expect(screen.getByRole("region", { name: "En vivo" })).toBeInTheDocument();
+    intervals.mockRestore();
+  });
   beforeEach(() => {
     cleanup();
     for (const mock of [mockWalks, mockSummary, mockDetail, mockLive, mockCancel, mockNoShow, mockRate, mockRepeat, mockReplay]) {
@@ -379,4 +395,3 @@ describe("Owner photo checks (AI on the pickup and return photos)", () => {
     expect(screen.queryByRole("region", { name: "Fotos del paseo" })).not.toBeInTheDocument();
   });
 });
-

@@ -533,6 +533,28 @@ button.ui-listrow:hover {
   font-weight: 600;
 }
 
+.mode-switch__logout {
+  min-height: 48px;
+  margin-top: 6px;
+  border: 1px solid rgb(255 255 255 / 38%);
+  border-radius: 15px;
+  background: rgb(13 42 69 / 48%);
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mode-switch__logout:hover {
+  background: rgb(13 42 69 / 68%);
+}
+
+.mode-switch__logout:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+
 /* PhotoInitial: a screen's initial badge that carries a photo instead. */
 [data-photo] {
   overflow: hidden;

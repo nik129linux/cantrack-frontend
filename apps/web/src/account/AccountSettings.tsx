@@ -133,9 +133,6 @@ export function AccountSettings({ role, userId, onSignOut }: AccountSettingsProp
           {isChanging ? "Cambiando…" : "Cambiar contraseña"}
         </button>
         <div className="explore__offer-actions">
-          <button type="button" className="explore__small" onClick={() => onSignOut()}>
-            Cerrar sesión
-          </button>
           <button type="button" className="explore__small" onClick={() => onSignOut("global")}>
             Cerrar sesión en todos los dispositivos
           </button>

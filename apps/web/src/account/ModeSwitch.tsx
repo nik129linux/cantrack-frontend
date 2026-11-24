@@ -8,7 +8,7 @@ import { accountError } from "./AccountSettings.js";
  * owner and walker: the API grants the other role (or switches to it) and the
  * refreshed session swaps the whole app over.
  */
-export function ModeSwitch({ role }: { role: AccountRole }) {
+export function ModeSwitch({ role, onSignOut }: { role: AccountRole; onSignOut: () => void }) {
   const [isSwitching, setIsSwitching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const otherRole: AccountRole = role === "owner" ? "walker" : "owner";
@@ -36,6 +36,9 @@ export function ModeSwitch({ role }: { role: AccountRole }) {
           : "Pide paseos para tu perro con este mismo correo. Tus clientes siguen aquí."}
       </p>
       {error !== null ? <p className="explore__error" role="alert">{error}</p> : null}
+      <button type="button" className="mode-switch__logout" onClick={onSignOut}>
+        Salir
+      </button>
     </div>
   );
 }

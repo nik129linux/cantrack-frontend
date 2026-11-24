@@ -7,8 +7,10 @@
     "node": ">=20"
   },
   "scripts": {
+    "dev": "npm --prefix apps/web run dev",
+    "build": "npm --prefix apps/web run build",
+    "typecheck": "tsc -p apps/web/tsconfig.json",
     "test": "vitest run",
-    "test:api": "cd apps/api-py && uv run pytest -q",
     "test:watch": "vitest"
   },
   "devDependencies": {
